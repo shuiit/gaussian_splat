@@ -1,0 +1,60 @@
+%% load hull
+clear
+close all
+clc
+
+exp = '2022_03_03'
+path = 'H:\My Drive\dark 2022\2022_03_03\hull\hull_Reorder\'
+easyWand_name = '3+4_post_03_03_2022_skip5_easyWandData.mat'
+
+
+movie = 19
+mov_name = sprintf('mov%d',movie)
+struct_file_name = sprintf('\\Shull_mov%d',movie)
+load([path,mov_name,'\hull_op\',struct_file_name])
+
+hull3d_file_name = sprintf('\\hull3d_mov%d',movie)
+load([path,mov_name,'\hull_op\',hull3d_file_name])
+
+load([path,easyWand_name])
+
+
+% load sparse
+for cam = 1:1:4
+    sparse_file = sprintf('\\mov%d_cam%d_sparse.mat',movie,cam)
+    sp{cam} = load([path,mov_name,sparse_file])
+end
+
+%%
+path = 'G:\My Drive\Research\gs_data\'
+save_path = [path,mov_name,'_',exp,'\','3d_pts','\']
+mkdir(save_path)
+
+hull_mat_file(hull3d.rightwing.hull.hull3d,[save_path,'rwing.mat'],hull3d.frames);
+hull_mat_file(hull3d.leftwing.hull.hull3d,[save_path,'lwing.mat'],hull3d.frames);
+hull_mat_file(hull3d.body.hull,[save_path,'body.mat'],hull3d.frames);
+
+real_coord(Shull,[save_path,'real_coord.mat'])
+%%
+path = 'G:\My Drive\Research\gs_data\'
+save_path = [path,mov_name,'_',exp,'\','images','\']
+mkdir(save_path)
+save_images(sp,save_path)
+
+
+%% world axes - from coefs
+path = 'G:\My Drive\Research\gs_data\'
+for j= 1:1:4
+save_path = [path,mov_name,'_',exp,'\','camera_KRX0']
+[R,K,X0,H] = decompose_dlt(easyWandData.coefs(:,j),easyWandData.rotationMatrices(:,:,j)');
+camera(:,:,j) = [K,R,X0];
+rotation(:,:,j) = R; 
+translation(:,:,j) = X0; 
+
+
+
+end
+plot_camera(rotation,translation,[1,0,0;0,1,0;0,0,1],'standard wand')
+
+save(save_path,'camera');
+
