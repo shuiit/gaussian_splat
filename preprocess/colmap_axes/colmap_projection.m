@@ -1,6 +1,6 @@
 
-pth = 'D:\Documents\south-building\sparse\'
-pth_im = 'D:\Documents\south-building\images\'
+pth = 'C:\Users\Roni\Documents\south-building\south-building\sparse\'
+pth_im = 'C:\Users\Roni\Documents\south-building\south-building\images\'
 
 filename_images = [pth, 'images.txt']
 filename_3d_pts = [pth, 'points3D.txt']
