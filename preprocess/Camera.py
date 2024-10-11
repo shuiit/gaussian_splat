@@ -23,7 +23,7 @@ class Camera():
         """updates the intrinsic K matrix for croped images
 
         Args:
-            crop_pixels (np array): loaction of left bottom pixel (we need the bottom because we flip it) [x,y]
+            crop_pixels (np array): loaction of top left pixel 
         """
         self.K_crop = self.K.copy()
         self.K_crop[0,2] = self.K[0,2] - crop_pixels[1]
@@ -41,7 +41,7 @@ class Camera():
             cam_matrix (np array): camera calibration matrix [K[R|T]]
 
         Returns:
-            pixels (x/u,y/v): _description_
+            pixels (x/u,y/v): pixels in image plane
         """
         camera_matrix = self.croped_camera_matrix if croped_camera_matrix else self.camera_matrix
         points_2d = np.matmul(camera_matrix,points.T)
@@ -50,9 +50,21 @@ class Camera():
     
 
     def rotate_world_to_cam(self,points):
+        """Rotate points from world coordinates to camera coordinates.
+
+        Args:
+        points (ndarray): Array of points in world coordinates (shape: [n, 3]).
+
+        Returns:
+            ndarray: Array of points in camera coordinates (shape: [n, 3]).
+        """
         return np.matmul(self.world_to_cam , points).T
     
+    
     def rotmat2qvec(self):
+        """Convert a rotation matrix to a quaternion vector
+        Taken from colmap loader (gaussian-splatting)-- probably taken from colmap 
+        """
         Rxx, Ryx, Rzx, Rxy, Ryy, Rzy, Rxz, Ryz, Rzz = self.R.flat
         K = np.array([
             [Rxx - Ryy - Rzz, 0, 0, 0],
