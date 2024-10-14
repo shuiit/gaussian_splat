@@ -16,8 +16,14 @@ class GenerateGsInput():
         if not os.path.exists(self.image_dir):
             os.makedirs(self.image_dir)
 
-    def save_croped_images(self):
-        [self.frames[image].croped_image.save(f'{self.path}/input_data_for_gs/images/{image}') for image in self.frames.keys()]
+    def save_croped_images(self,croped_image = False):
+        if croped_image == True:
+            image_rgb = [self.frames[image].croped_image.convert('RGB') for image in self.frames.keys()]
+        else:
+            image_rgb = [self.frames[image].image.convert('RGB') for image in self.frames.keys()]
+
+            for (im_name,image) in zip(self.frames.keys(),image_rgb):
+                image.save(f'{self.path}/input_data_for_gs/images/{im_name}') 
 
 
     def generate_camera_text(self,croped_image = False):
@@ -28,8 +34,8 @@ class GenerateGsInput():
             for image in self.frames.values(): 
                 intrinsic = image.K_crop if croped_image == True else image.K
                 intrinsic = np.round(np.array(intrinsic),2)
-                image_size = list(self.frames.values())[0].crop_size
-                camera_data = [image.camera_number, "PINHOLE", image_size, image_size, intrinsic[0,0], intrinsic[1,1], intrinsic[0,2], intrinsic[1,2]]
+                image_size = list(self.frames.values())[0].size if croped_image == True else list(self.frames.values())[0].image.size
+                camera_data = [image.camera_number, "PINHOLE", image_size[0], image_size[1], intrinsic[0,0], intrinsic[1,1], intrinsic[0,2], intrinsic[1,2]]
                 file.write(" ".join(map(str, camera_data)) + "\n")
 
 

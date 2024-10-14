@@ -65,7 +65,7 @@ class Camera():
         """Convert a rotation matrix to a quaternion vector
         Taken from colmap loader (gaussian-splatting)-- probably taken from colmap 
         """
-        Rxx, Ryx, Rzx, Rxy, Ryy, Rzy, Rxz, Ryz, Rzz = self.R.flat
+        Rxx, Ryx, Rzx, Rxy, Ryy, Rzy, Rxz, Ryz, Rzz = self.R.T.flat
         K = np.array([
             [Rxx - Ryy - Rzz, 0, 0, 0],
             [Ryx + Rxy, Ryy - Rxx - Rzz, 0, 0],
