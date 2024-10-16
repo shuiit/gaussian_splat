@@ -103,6 +103,12 @@ class Frame(Camera):
         [pixels,idx] = np.unique(pxls[idx_sorted_by_z,:], axis=0,return_index=True)
         return voxels_sorted_by_z[idx,:],pixels
     
+    def add_homo_coords(self,points):
+        return np.column_stack((points,np.ones([points.shape[0],1])))
+
+
+
+    
 
 
 
