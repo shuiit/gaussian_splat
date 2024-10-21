@@ -70,6 +70,6 @@ def define_frames(frames,points_3d):
     image_name = []
     points_in_idx = {}
     for frame in frames:
-        image_name += [f'P{frame}CAM{cam + 1}.jpg' for cam in range(4)]
+        image_name += [f'P{frame}CAM{cam + 1}' for cam in range(4)]
         points_in_idx[f'P{frame}'] = pd.concat([points_3d[body_wing][points_3d[body_wing]['frame'] == frame] for body_wing in ['body','rwing','lwing']])
     return image_name,points_in_idx

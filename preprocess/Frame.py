@@ -1,4 +1,4 @@
-
+import cv2
 import numpy as np
 from PIL import Image
 from Camera import Camera
@@ -19,9 +19,20 @@ class Frame(Camera):
             real_coord (numpy.ndarray): Array of real coordinates associated with the points.
             idx (int): Unique identifier for the image.
         """
-        self.image = Image.open(f'{path}images/{im_name}')
-        self.image_id = idx
+        im = scipy.io.loadmat(f'{path}images/{im_name}.mat')['im']
+        self.image = Image.fromarray(np.array((im * 255).astype(np.uint8)), mode="L")
         y,x = np.where(np.array(self.image) > 0)
+        kernel = np.ones((2, 2), np.uint8) 
+        eroded_image = cv2.erode(np.array(self.image), kernel)
+
+        # self.image =np.array(self.image)
+        # self.image[self.image == 0] = 255
+
+        # self.image = 256 - np.array(self.image)
+        # self.image[self.image == 256] = 0
+
+        self.image =  Image.fromarray(eroded_image)
+        self.image_id = idx
         self.pixels = np.vstack([y,x]).T
         self.path = path
         self.frame = int(im_name.split('CAM')[0].split('P')[1])
