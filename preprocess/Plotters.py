@@ -31,6 +31,8 @@ def scatter3d(fig,data,color,size,opa = 1):
         marker=dict(
             color=color,  # Set marker color to green
             size=size,  # Set marker size to small
+            colorscale='gray',
+            colorbar=dict(title="Colorbar"),
             opacity = opa
         )
         ))
