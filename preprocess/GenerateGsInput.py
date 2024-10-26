@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from PIL import Image
 
 
 
@@ -23,6 +24,13 @@ class GenerateGsInput():
             image_rgb = [self.frames[image].image.convert('RGB') for image in self.frames.keys()]
 
         for (im_name,image) in zip(self.frames.keys(),image_rgb):
+            im_np = np.array(image)
+            idx = np.where(im_np[:,:,0] == 0)
+            im_np[idx[0],idx[1],0] = 200
+            image = Image.fromarray(im_np)
+
+
+
             image.save(f'{self.path}/input_data_for_gs/images/{im_name}', format='JPEG', subsampling=0, quality=100)
 
 

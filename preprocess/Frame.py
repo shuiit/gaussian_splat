@@ -6,7 +6,7 @@ import numpy as np
 import scipy.io
 import pandas as pd
 import matplotlib.pyplot as plt
-
+from skimage.exposure import match_histograms
 class Frame(Camera):
     def __init__(self,path,im_name,point_3d,real_coord,idx):
         """
@@ -20,18 +20,47 @@ class Frame(Camera):
             idx (int): Unique identifier for the image.
         """
         im = scipy.io.loadmat(f'{path}images/{im_name}.mat')['im']
+        bg = scipy.io.loadmat(f'{path}images/bg.mat')['bg']
+        self.bg = np.array((bg//255).astype(np.uint16))*0+255
         self.image = Image.fromarray(np.array((im * 255).astype(np.uint8)), mode="L")
         y,x = np.where(np.array(self.image) > 0)
         kernel = np.ones((2, 2), np.uint8) 
-        eroded_image = cv2.erode(np.array(self.image), kernel)
-
+        eroded_image = np.array(cv2.erode(np.array(self.image), kernel))
+        self.image_with_bg = np.array(self.bg.copy())
+        self.image_with_bg[eroded_image > 0] = eroded_image[eroded_image > 0]
+        self.image_no_bg =  Image.fromarray(eroded_image)
+        self.image =  Image.fromarray(self.image_with_bg)
         # self.image =np.array(self.image)
         # self.image[self.image == 0] = 255
 
         # self.image = 256 - np.array(self.image)
         # self.image[self.image == 256] = 0
 
-        self.image =  Image.fromarray(eroded_image)
+        # diff_image_bg = np.array(self.image).astype(np.uint8) - np.array(self.bg).astype(np.uint8)
+        # diff_image_bg = diff_image_bg*(np.array(self.image_no_bg) > 0)
+
+        # alpha = (np.array(self.bg).astype(np.float)/255 - np.array(self.image_with_bg).astype(np.float)/255)/(1 -np.array(self.bg).astype(np.float)/255 )
+
+        # I_observed = np.array(self.image_with_bg).astype(np.float)
+        # I_background =np.array(self.bg).astype(np.float)
+        # # Calculate alpha mask based on the absolute difference
+        # alpha = np.abs(I_observed - I_background) / 255.0
+        # alpha = np.clip(alpha, 0, 1)  # Ensure alpha is within [0, 1]
+
+        # rgb_im = np.dstack([I_observed]*3)
+        # I_new_background = np.dstack([I_observed*0+255,I_observed*0,I_observed*0]*3)
+
+        # # Blend the observed image with the new background using the alpha mask
+        # I_new_observed = alpha * I_observed 
+
+        # # Ensure the result is in valid range and type
+        # I_new_observed = np.clip(I_new_observed, 0, 255).astype(np.uint8)
+
+
+        # I_new_background = np.dstack([I_new_observed/255.0,I_new_observed*0,I_new_observed*0])
+
+
+
         self.image_id = idx
         self.pixels = np.vstack([y,x]).T
         self.path = path
@@ -53,8 +82,10 @@ class Frame(Camera):
         """
         cm = np.mean(self.pixels,0).astype(int)
         im_to_crop = self.image.copy()
+        im_to_crop_nobg = self.image_no_bg.copy()
         bounding_box = [max(0,cm[1] - delta_xy), max(0,cm[0]-delta_xy), max(0,cm[1] - delta_xy) + delta_xy*2 , max(0,cm[0]-delta_xy) + delta_xy*2] # [top left, bottom right]
         self.croped_image = im_to_crop.crop(bounding_box)
+        self.croped_image_no_bg = im_to_crop_nobg.crop(bounding_box)
         self.top_left = [cm[0]-delta_xy,cm[1]-delta_xy]
         self.crop_size = delta_xy*2
         self.croped_pixels = self.pixels - self.top_left
@@ -118,6 +149,8 @@ class Frame(Camera):
         return np.column_stack((points,np.ones([points.shape[0],1])))
 
 
+    def match_hist(self,ref_image):
+        self.croped_image = match_histograms(np.array(self.croped_image), np.array(ref_image))
 
     
 
