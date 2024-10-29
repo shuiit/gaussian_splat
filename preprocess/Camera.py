@@ -1,6 +1,7 @@
 
 import numpy as np
 import scipy.io
+import math 
 
 class Camera():
     def __init__(self,path,camera_number):
@@ -76,6 +77,10 @@ class Camera():
         if qvec[0] < 0:
             qvec *= -1
         self.qvec = np.round(np.array(qvec),7)
+    
+    def focal2fov(self,focal, pixels):
+        return 2*math.atan(pixels/(2*focal))
+
         
     
 

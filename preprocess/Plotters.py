@@ -49,3 +49,19 @@ def plot_hull(real_hull,size = 3):
     [scatter3d(fig,data,color,size) for data,color in zip(real_hull.values(),colors)]
 
     fig.show()
+
+def scatter_projections_from_gs(frames,gs, plot_image = False):
+    
+    im_name = list(frames.keys())[0]
+    fig,axs = plt.subplots(2,2)
+    for cam in range(4):
+        image = f'{im_name.split("CAM")[0]}CAM{cam+1}.jpg'
+        indices = (gs.color[:,0] < 1) &(gs.color[:,1] < 1) & (gs.color[:,2] < 1) & (gs.color[:,0] > 0) & (gs.color[:,1] > 0) &(gs.color[:,2] > 0) 
+        colors = gs.color[indices, :]  # Filtered colors (RGB or RGBA)
+        homo_voxels_with_idx = frames[image].add_homo_coords(gs.xyz[indices,0:3])
+        proj = frames[image].project_on_image(homo_voxels_with_idx,croped_camera_matrix = True)
+        if plot_image == True:
+            axs[cam // 2,cam % 2].imshow(frames[image].croped_image,'gray')
+            proj[:,1] = 800-proj[:,1]
+        axs[cam // 2,cam % 2].scatter(proj[:,0],proj[:,1],s = 1,c = colors)
+

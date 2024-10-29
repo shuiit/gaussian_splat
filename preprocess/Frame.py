@@ -67,6 +67,7 @@ class Frame(Camera):
         self.frame = int(im_name.split('CAM')[0].split('P')[1])
         self.real_coord_frame = real_coord[real_coord[:,3] == self.frame,:]
         self.points_in_idx = point_3d
+        self.image_size = self.image.size
         super().__init__(self.path,int(im_name.split('CAM')[-1].split('.')[0]) - 1)
         self.crop_image() 
         self.idx_to_real()
@@ -86,6 +87,7 @@ class Frame(Camera):
         bounding_box = [max(0,cm[1] - delta_xy), max(0,cm[0]-delta_xy), max(0,cm[1] - delta_xy) + delta_xy*2 , max(0,cm[0]-delta_xy) + delta_xy*2] # [top left, bottom right]
         self.croped_image = im_to_crop.crop(bounding_box)
         self.croped_image_no_bg = im_to_crop_nobg.crop(bounding_box)
+        self.croped_image_size = self.croped_image.size
         self.top_left = [cm[0]-delta_xy,cm[1]-delta_xy]
         self.crop_size = delta_xy*2
         self.croped_pixels = self.pixels - self.top_left
@@ -151,6 +153,15 @@ class Frame(Camera):
 
     def match_hist(self,ref_image):
         self.croped_image = match_histograms(np.array(self.croped_image), np.array(ref_image))
+
+    def filter_projections_from_bg(self,point3d,croped_image = False):
+        image = self.image_no_bg if croped_image == False else self.croped_image_no_bg
+        homo_voxels_with_idx = self.add_homo_coords(point3d)
+        proj = self.project_on_image(homo_voxels_with_idx,croped_camera_matrix = True)
+
+        idx_round = np.round(np.fliplr(proj)).astype(int)
+        return np.array(image)[idx_round[:,0],idx_round[:,1]] == 0
+
 
     
 
