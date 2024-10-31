@@ -5,11 +5,14 @@ from plyfile import PlyData, PlyElement
 import Plotters
 
 class GaussianSplat():
-    def __init__(self,path = None,vertices = None):
+    def __init__(self,path = None,vertices = None,block_xy = [16,16], image_size = [160,160]):
         self.path = path
         self.vertices = PlyData.read(path)["vertex"] if vertices is None else vertices
         self.xyz = np.column_stack((self.vertices["x"], self.vertices["y"], self.vertices["z"]))
         self.scale = np.exp(np.column_stack(([self.vertices["scale_0"], self.vertices["scale_1"], self.vertices["scale_2"]])))
+        self.image_size = image_size
+        self.block_xy = block_xy
+        self.grid = [(self.image_size[0] + self.block_xy[0] - 1)/self.block_xy[0],(self.image_size[1] + self.block_xy[1] - 1)/self.block_xy[1]]
 
         SH_C0 = 0.28209479177387814
         self.color = np.column_stack([
@@ -66,6 +69,18 @@ class GaussianSplat():
         T = rotate_jacobian @ jacobian
         cov = T.transpose(0,2,1) @ self.cov3d @ T
         self.cov2d = np.squeeze(np.dstack((cov[:,0,0],cov[:,0,1],cov[:,1,1])))
+        self.det = self.cov2d[:,0]*self.cov2d[:,2] - self.cov2d[:,1]*self.cov2d[:,1]
+        self.inv_det = 1/self.det
+        self.conic = np.column_stack((self.cov2d[:,2]*self.inv_det,-self.cov2d[:,1]*self.inv_det,self.cov2d[:,0]*self.inv_det))
+        self.radius = self.compute_radius()
+        self.projected = projected
+
+    def compute_radius(self):
+        mid = 0.5*(self.cov2d[:,0] + self.cov2d[:,2])
+        mid_for_lambda = np.column_stack(([0.1]*mid.shape[0],mid * mid - self.det))
+        lambda1 = mid + np.sqrt(np.max(mid_for_lambda))
+        lambda2 = mid - np.sqrt(np.max(mid_for_lambda))
+        return np.ceil(3.0 * np.sqrt(np.max(np.column_stack((lambda1, lambda2)))))
 
     def calc_jacobian(self,fx,fy,projected):
 
@@ -75,5 +90,24 @@ class GaussianSplat():
             zero_np, fy / projected[:,2:], - (fy * projected[:,1:2]) / (projected[:,2:] ** 2),
             zero_np, zero_np, zero_np
         ))
+
+    
+    # def get_rect(p, max_radius, grid, BLOCK_X, BLOCK_Y):
+
+
+
+    #     grid_x, grid_y = grid  # unpack grid dimensions
+
+    #     # Calculate min and max bounds of the rectangle
+    #     rect_min_x = min(grid_x, max(0, int((p[0] - max_radius) / BLOCK_X)))
+    #     rect_min_y = min(grid_y, max(0, int((p[1] - max_radius) / BLOCK_Y)))
+        
+    #     rect_max_x = min(grid_x, max(0, int((p[0] + max_radius + BLOCK_X - 1) / BLOCK_X)))
+    #     rect_max_y = min(grid_y, max(0, int((p[1] + max_radius + BLOCK_Y - 1) / BLOCK_Y)))
+        
+    #     rect_min = (rect_min_x, rect_min_y)
+    #     rect_max = (rect_max_x, rect_max_y)
+        
+    #     return rect_min, rect_max
 
 
