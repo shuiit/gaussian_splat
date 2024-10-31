@@ -30,35 +30,6 @@ class Frame(Camera):
         self.image_with_bg[eroded_image > 0] = eroded_image[eroded_image > 0]
         self.image_no_bg =  Image.fromarray(eroded_image)
         self.image =  Image.fromarray(self.image_with_bg)
-        # self.image =np.array(self.image)
-        # self.image[self.image == 0] = 255
-
-        # self.image = 256 - np.array(self.image)
-        # self.image[self.image == 256] = 0
-
-        # diff_image_bg = np.array(self.image).astype(np.uint8) - np.array(self.bg).astype(np.uint8)
-        # diff_image_bg = diff_image_bg*(np.array(self.image_no_bg) > 0)
-
-        # alpha = (np.array(self.bg).astype(np.float)/255 - np.array(self.image_with_bg).astype(np.float)/255)/(1 -np.array(self.bg).astype(np.float)/255 )
-
-        # I_observed = np.array(self.image_with_bg).astype(np.float)
-        # I_background =np.array(self.bg).astype(np.float)
-        # # Calculate alpha mask based on the absolute difference
-        # alpha = np.abs(I_observed - I_background) / 255.0
-        # alpha = np.clip(alpha, 0, 1)  # Ensure alpha is within [0, 1]
-
-        # rgb_im = np.dstack([I_observed]*3)
-        # I_new_background = np.dstack([I_observed*0+255,I_observed*0,I_observed*0]*3)
-
-        # # Blend the observed image with the new background using the alpha mask
-        # I_new_observed = alpha * I_observed 
-
-        # # Ensure the result is in valid range and type
-        # I_new_observed = np.clip(I_new_observed, 0, 255).astype(np.uint8)
-
-
-        # I_new_background = np.dstack([I_new_observed/255.0,I_new_observed*0,I_new_observed*0])
-
 
 
         self.image_id = idx
@@ -73,6 +44,8 @@ class Frame(Camera):
         self.idx_to_real()
         self.camera_number = idx
 
+    def get_croped_camera(self):
+        return Camera(self.path, self.camera_number,{'camera': np.hstack((self.K_crop,self.R,self.X0))[:, :, np.newaxis]})
     
     def crop_image(self,delta_xy = 80):
         """

@@ -48,12 +48,11 @@ class GaussianSplat():
         scale_rot = scale @ rot_mat # scales the rotation matrix -> generates a gaussian in the orientation of q. 
         self.cov3d = scale_rot.transpose(0,2,1) @ scale_rot # the covariance matrix 
 
-    def calc_cov2d(self,image,croped_image = False):
-        images_size = image.image_size if croped_image == False else image.croped_image_size
+    def calc_cov2d(self,camera, image_size = [160,160]):
         # camera parameters:
-        fxfy = [image.K_crop[0,0],image.K_crop[1,1]]
-        tan_fov = np.array([image.focal2fov(focal, images_size[1]) for focal,size in zip(fxfy,images_size)])
-        viewmat = image.world_to_cam
+        fxfy = [camera.K[0,0],camera.K[1,1]]
+        tan_fov = np.array([camera.focal2fov(focal, size) for focal,size in zip(fxfy,image_size)])
+        viewmat = camera.world_to_cam
 
         # project 3d coordinates and clip to keep only pixels in screen space
         projected = np.matmul(viewmat , np.column_stack((self.xyz,np.ones(self.xyz.shape[0]))).T).T
@@ -90,6 +89,16 @@ class GaussianSplat():
             zero_np, fy / projected[:,2:], - (fy * projected[:,1:2]) / (projected[:,2:] ** 2),
             zero_np, zero_np, zero_np
         ))
+
+    def get_rect(self,cam):   
+        xyz_homo = self.add_homo_coords(self.xyz)
+        pixel = cam.project_on_image(xyz_homo)
+        xy_up_left_corner = np.minimum(self.grid,(np.maximum(0,pixel - self.radius) / self.block_xy).astype(int))
+        xy_bot_right_corner = np.minimum(self.grid,((np.maximum(0,(pixel + self.radius + self.block_xy - 1) / self.block_xy)))).astype(int)
+        return xy_up_left_corner,xy_bot_right_corner
+
+    def add_homo_coords(self,points):
+        return np.column_stack((points,np.ones([points.shape[0],1])))
 
     
     # def get_rect(p, max_radius, grid, BLOCK_X, BLOCK_Y):
