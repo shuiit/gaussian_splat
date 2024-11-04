@@ -34,18 +34,18 @@ C4 = [
 
 def rgb_from_sh(deg,sh,xyz = None,camera_position = None):
     
-    if deg == 0:
+    if deg >= 0:
         result = (C0 * sh[:,0:3])
 
     
-    if deg == 1:
+    if deg >= 1:
         direction = (xyz - camera_position.T)/np.linalg.norm([xyz - camera_position.T],axis = 1)
         x = direction[:,0][np.newaxis,:].T
         y = direction[:,1][np.newaxis,:].T
         z = direction[:,2][np.newaxis,:].T
         result =  result - C1 * y * sh[:,[3,4,5]] + C1 * z * sh[:,[6,7,8]] - C1 * x* sh[:,[9,10,11]]
 
-    if deg == 2:
+    if deg >= 2:
         xx,yy,zz = x * x,y * y,z * z
         xy,yz,xz = x * y, y * z, x * z
         result = result + C2[0] * xy * sh[:,[12,13,14]]

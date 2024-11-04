@@ -6,20 +6,31 @@ import Plotters
 import sh_utils
 
 class GaussianSplat():
-    def __init__(self,path = None,vertices = None,block_xy = [16,16], image_size = [160,160],sh = None, deg_sh = 0):
+    def __init__(self,path = None,vertices = None,block_xy = [16,16], image_size = [160,160],sh = None):
         self.path = path
         self.vertices = PlyData.read(path)["vertex"] if vertices is None else vertices
         self.xyz = np.column_stack((self.vertices["x"], self.vertices["y"], self.vertices["z"]))
         self.scale = np.exp(np.column_stack(([self.vertices["scale_0"], self.vertices["scale_1"], self.vertices["scale_2"]])))
-        
+        self.opacity = 1 / (1 + np.exp(-self.vertices["opacity"]))#self.vertices["opacity"]         
+        self.rot = np.column_stack([self.vertices["rot_0"], self.vertices["rot_1"], self.vertices["rot_2"], self.vertices["rot_3"]])
+
+
         self.sh = np.column_stack([self.vertices[key] for key in self.vertices.data.dtype.names if 'rest' in key or 'dc' in key]) if sh is None else sh
         self.image_size = image_size
         self.block_xy = block_xy
         self.grid = [int((self.image_size[0] + self.block_xy[0] - 1)/self.block_xy[0]),int((self.image_size[1] + self.block_xy[1] - 1)/self.block_xy[1])]
-        self.opacity = 1 / (1 + np.exp(-self.vertices["opacity"]))#self.vertices["opacity"]         
-        self.rot = np.column_stack([self.vertices["rot_0"], self.vertices["rot_1"], self.vertices["rot_2"], self.vertices["rot_3"]])
         self.get_color(0)
         
+
+    def rearange_gs(self,idx_to_rearange):
+        self.vertices = self.vertices[idx_to_rearange]
+        self.xyz = self.xyz[idx_to_rearange]
+        self.scale = self.scale[idx_to_rearange]
+        self.opacity = self.opacity[idx_to_rearange]
+        self.rot = self.rot[idx_to_rearange]
+        self.color = self.color[idx_to_rearange]
+        self.sh = self.sh[idx_to_rearange]
+
 
     def projection_filter(self,frames,point3d,**kwargs):
         return np.column_stack([image.filter_projections_from_bg(point3d,**kwargs) for image in frames.values()]).any(axis = 1) == False
@@ -86,14 +97,15 @@ class GaussianSplat():
         lambda2 = mid - np.sqrt(np.maximum(0.1,mid * mid - self.det))
         return np.ceil(3.0 * np.sqrt(np.maximum(lambda1, lambda2)))
 
-    def calc_jacobian(self,fx,fy,projected):
 
+    def calc_jacobian(self,fx,fy,projected):
         zero_np = np.zeros((projected.shape[0],1))
         return np.column_stack((
             fx / projected[:,2:], zero_np, - (fx * projected[:,0:1]) / (projected[:,2:] ** 2),
             zero_np, fy / projected[:,2:], - (fy * projected[:,1:2]) / (projected[:,2:] ** 2),
             zero_np, zero_np, zero_np
         ))
+
 
     def get_rect(self,cam):   
         xyz_homo = self.add_homo_coords(self.xyz)
@@ -102,12 +114,13 @@ class GaussianSplat():
         xy_bot_right_corner = np.minimum(self.grid,((np.maximum(0,(pixel + self.radius[:,np.newaxis] + self.block_xy - 1) / self.block_xy)))).astype(int)
         return xy_up_left_corner,xy_bot_right_corner
 
+
     def add_homo_coords(self,points):
         return np.column_stack((points,np.ones([points.shape[0],1])))
     
     def get_color(self,deg, **kwargs):
         self.color = sh_utils.rgb_from_sh(deg,self.sh, **kwargs)
-    
+
 
 
 
