@@ -44,8 +44,8 @@ class Frame(Camera):
         self.idx_to_real()
         self.camera_number = idx
 
-    def get_croped_camera(self):
-        return Camera(self.path, self.camera_number,{'camera': np.hstack((self.K_crop,self.R,self.X0))[:, :, np.newaxis]})
+    def get_croped_camera(self,**kwargs):
+        return Camera(self.path, self.camera_number,{'camera': np.hstack((self.K_crop,self.R,self.X0))[:, :, np.newaxis]},image_size = [160,160],**kwargs)
     
     def crop_image(self,delta_xy = 80):
         """

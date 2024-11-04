@@ -22,7 +22,7 @@ Created on Mon Jun  5 08:25:02 2023
 """
 
 
-def scatter3d(fig,data,color,size,opa = 1):
+def scatter3d(fig,data,color,size,opa = 1,colorscale = 'gray'):
     fig.add_trace(go.Scatter3d(
         x=data[:,0],
         y=data[:,1],
@@ -31,7 +31,7 @@ def scatter3d(fig,data,color,size,opa = 1):
         marker=dict(
             color=color,  # Set marker color to green
             size=size,  # Set marker size to small
-            colorscale='gray',
+            colorscale=colorscale,
             colorbar=dict(title="Colorbar"),
             opacity = opa
         )

@@ -4,7 +4,7 @@ import scipy.io
 import math 
 
 class Camera():
-    def __init__(self,path,camera_number, cam = False):
+    def __init__(self,path,camera_number, cam = False, image_size = [800,1280]):
         self.path = path
         cam,get_cam_mat = (scipy.io.loadmat(f'{path}/camera_KRX0.mat'),camera_number) if cam == False else (cam,0)
         self.K = cam['camera'][0:3,0:3,get_cam_mat]
@@ -23,6 +23,8 @@ class Camera():
         self.world_to_cam = np.hstack([self.R,self.t])
         self.camera_matrix = np.hstack([np.matmul(self.K,self.R),np.matmul(self.K,self.t)])
         self.rotmat2qvec()
+        self.getProjectionMatrix(image_size)
+
         
 
 
@@ -119,7 +121,25 @@ class Camera():
         self.full_proj_transform = np.matmul(P,world_view_transform)  # Shape: (1, N, K)
 
     
+    def proj_screen(self,pixel,s):
+        # translate to ndc space
+        return ((pixel + 1)*s-1)*0.5
     
+
+    
+
+    def rotate_and_project_with_proj_mat(self, points, screen_size):
+        
+        xyz_homo  = np.column_stack((points,np.ones((points.shape[0],1))))
+        points_camera = np.matmul(self.world_to_cam,xyz_homo.T).T
+
+
+        p_proj = np.matmul(self.full_proj_transform,xyz_homo.T).T
+        p_proj = p_proj/p_proj[:,3:]
+        pixels = self.proj_screen(p_proj,screen_size)
+        return pixels,points_camera
+
+
 
 
         
