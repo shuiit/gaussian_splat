@@ -5,6 +5,8 @@ import math
 
 class Camera():
     def __init__(self,path,camera_number, cam = False, image_size = [800,1280]):
+        """Initialize the camera object with parameters, intrinsic and extrinsic matrices."""
+
         self.path = path
         cam,get_cam_mat = (scipy.io.loadmat(f'{path}/camera_KRX0.mat'),camera_number) if cam == False else (cam,0)
         self.K = cam['camera'][0:3,0:3,get_cam_mat]
@@ -22,6 +24,7 @@ class Camera():
         self.zfar = 100
         self.world_to_cam = np.hstack([self.R,self.t])
         self.camera_matrix = np.hstack([np.matmul(self.K,self.R),np.matmul(self.K,self.t)])
+        self.image_size = image_size
         self.rotmat2qvec()
         self.getProjectionMatrix(image_size)
 
@@ -92,7 +95,11 @@ class Camera():
 
     
     def getProjectionMatrix(self,im_size):
+        """Compute the projection matrix for a given image size.
 
+        Args:
+            im_size (list): Size of the image [height, width].
+        """
         fovy = self.focal2fov(self.fy, im_size[1])
         fovx = self.focal2fov(self.fx, im_size[0])
         tanHalfFovY = math.tan((fovy / 2))
@@ -122,22 +129,53 @@ class Camera():
 
     
     def proj_screen(self,pixel,s):
+        """Translate pixel coordinates to normalized device coordinates (NDC).
+
+        Args:
+            pixel (np array): Pixel coordinates.
+            s (float): Scaling factor.
+
+        Returns:
+            np array: Translated coordinates in NDC.
+        """
         # translate to ndc space
         return ((pixel + 1)*s-1)*0.5
     
 
     
 
-    def rotate_and_project_with_proj_mat(self, points, screen_size):
-        
-        xyz_homo  = np.column_stack((points,np.ones((points.shape[0],1))))
-        points_camera = np.matmul(self.world_to_cam,xyz_homo.T).T
+    def project_with_proj_mat(self, points):
+        """
+        Projects 3D points in world coordinates onto the 2D image plane 
+        using the precomputed full projection matrix.
+
+        Args:
+            points (np.array): Array of 3D points in world coordinates (shape: [n, 3]).
+
+        Returns:
+            np.array: Array of 2D pixel coordinates in normalized device coordinates.
+        """
+        xyz_homo  = self.homogenize_coordinate(points)
 
 
-        p_proj = np.matmul(self.full_proj_transform,xyz_homo.T).T
+        p_proj = np.matmul(self.full_proj_transform,xyz_homo).T
         p_proj = p_proj/p_proj[:,3:]
-        pixels = self.proj_screen(p_proj,screen_size)
-        return pixels,points_camera
+        pixels = self.proj_screen(p_proj,self.image_size[0])
+        return pixels
+    
+
+    def homogenize_coordinate(self,points):
+        """
+        Converts 3D points to homogeneous coordinates by adding a fourth 
+        dimension with value 1 to each point.
+
+        Args:
+            points (np.array): Array of 3D points (shape: [n, 3]).
+
+        Returns:
+            np.array: Array of points in homogeneous coordinates (shape: [4, n]).
+        """
+        return np.column_stack((points,np.ones((points.shape[0],1)))).T
 
 
 

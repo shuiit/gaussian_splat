@@ -121,13 +121,42 @@ class Frame(Camera):
         return voxels_sorted_by_z[idx,:],pixels
     
     def add_homo_coords(self,points):
+        """
+        Adds homogeneous coordinates to a set of 3D points.
+
+        Args:
+            points (np.array): Array of 3D points with shape (n, 3).
+
+        Returns:
+            np.array: Array of 3D points in homogeneous coordinates with shape (n, 4).
+        """
         return np.column_stack((points,np.ones([points.shape[0],1])))
 
 
     def match_hist(self,ref_image):
+        """
+        Matches the histogram of the cropped image to a reference image.
+
+        Args:
+            ref_image (np.array): The reference image to which the histogram is matched.
+        
+        Modifies:
+            self.croped_image: Adjusts the histogram of `self.croped_image` to match `ref_image`.
+        """
         self.croped_image = match_histograms(np.array(self.croped_image), np.array(ref_image))
 
     def filter_projections_from_bg(self,point3d,croped_image = False):
+        """
+        Filters 3D points projected onto the image to exclude background pixels.
+
+        Args:
+            point3d (np.array): Array of 3D points to be projected.
+            croped_image (bool): If True, uses the cropped image without background.
+                                If False, uses the full image without background.
+
+        Returns:
+            np.array: Boolean array indicating which projected 3D points are on background pixels (True if background).
+        """
         image = self.image_no_bg if croped_image == False else self.croped_image_no_bg
         homo_voxels_with_idx = self.add_homo_coords(point3d)
         proj = self.project_on_image(homo_voxels_with_idx,croped_camera_matrix = True)
