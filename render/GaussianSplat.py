@@ -142,6 +142,7 @@ class GaussianSplat():
         tile_viwe_mat = np.tile(viewmat[0:3,0:3].T,(jacobian.shape[0],1,1))
         T = tile_viwe_mat @ jacobian
         cov = T.transpose(0,2,1) @ self.cov3d.transpose(0,2,1) @ T
+        # cov = jacobian @ tile_viwe_mat @ self.cov3d.transpose(0,2,1) @ tile_viwe_mat.transpose(0,2,1) @  jacobian.transpose(0,2,1)
         self.cov2d_matrix = cov
         self.cov2d = np.squeeze(np.dstack((cov[:,0,0],cov[:,0,1],cov[:,1,1])))
 
