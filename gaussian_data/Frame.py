@@ -67,21 +67,21 @@ class Frame(Camera):
         self.camera_calibration_crop(self.top_left) 
 
 
-    def map_3d_2d(self, croped_image = False):
+    def map_3d_2d(self, croped_image = False,use_zbuff = True):
         """
         Map 3D voxel positions to 2D pixel coordinates and store relevant data.
 
         Args:
             croped_image (bool, optional): Whether to use cropped image pixels. Default is False.
         """
-        voxels,pixels_of_voxels = self.z_buffer(croped_camera_matrix = croped_image)
+        voxels,pixels_of_voxels = self.z_buffer(croped_camera_matrix = croped_image) if use_zbuff == True else self.map_no_zbuff(croped_camera_matrix = croped_image)
         pixels_from_image = self.croped_pixels if croped_image else self.pixels
 
         original_projected_pixels = np.vstack((pixels_of_voxels,np.fliplr(pixels_from_image))) # project pixels
         [non_intersect_pixels,cnt] = np.unique(original_projected_pixels,axis = 0,return_counts=True) # identify non intersecting pixels
         non_intersect_pixels = non_intersect_pixels[cnt == 1,:] 
 
-        all_pixels = np.vstack((pixels_of_voxels, non_intersect_pixels))
+        all_pixels = np.vstack((pixels_of_voxels, non_intersect_pixels)) if use_zbuff == True else pixels_of_voxels
         all_3d_idx = np.full(all_pixels.shape[0], -1)
         all_3d_idx[0:voxels.shape[0]] = voxels[:,3]
 
@@ -101,6 +101,16 @@ class Frame(Camera):
         self.points_in_ew_frame = np.array([self.real_coord_frame[self.points_in_idx[ax] - 1,idx] for idx,ax in enumerate(['X','Y','Z'])]).T
         self.points_in_ew_frame_homo = np.hstack((self.points_in_ew_frame,np.ones([self.points_in_ew_frame.shape[0],1])))
         self.points_in_ew_frame  = np.column_stack((self.points_in_ew_frame,np.arange(1,self.points_in_ew_frame.shape[0] + 1)))
+    
+    def map_no_zbuff(self,croped_camera_matrix = False):
+        
+        voxels_cam = np.matmul(self.world_to_cam, self.points_in_ew_frame_homo.T).T
+        projected = self.project_on_image(self.points_in_ew_frame_homo,croped_camera_matrix)
+        pxls = np.round(projected) 
+        
+        idx_sorted_by_z = voxels_cam[:,2].argsort()
+        voxels_sorted_by_z = self.points_in_ew_frame[idx_sorted_by_z,:]
+        return voxels_sorted_by_z,pxls[idx_sorted_by_z,:]
 
     def z_buffer(self,croped_camera_matrix = False):
         """
