@@ -31,7 +31,7 @@ class Frame(Camera):
         self.image_no_bg =  Image.fromarray(eroded_image)
         self.image =  Image.fromarray(self.image_with_bg)
 
-
+        self.image_name = f'{im_name}.jpg'
         self.image_id = idx
         self.pixels = np.vstack([y,x]).T
         self.path = path

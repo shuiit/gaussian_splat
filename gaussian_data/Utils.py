@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.io
 import pandas as pd
-
+import pickle
 
 def get_dict_for_points3d(frames):
     """
@@ -73,6 +73,11 @@ def define_frames(frames,points_3d):
         image_name += [f'P{frame}CAM{cam + 1}' for cam in range(4)]
         points_in_idx[f'P{frame}'] = pd.concat([points_3d[body_wing][points_3d[body_wing]['frame'] == frame] for body_wing in ['body','rwing','lwing']])
     return image_name,points_in_idx
+
+
+def pickle_file(dict, file_name):
+    with open(file_name, 'wb') as f:
+        pickle.dump(dict, f)
 
 
 

@@ -1,7 +1,8 @@
 import os
 import numpy as np
 from PIL import Image
-
+import collections
+import pickle 
 
 
 class GenerateGsInput():
@@ -75,3 +76,46 @@ class GenerateGsInput():
             for key in voxel_dict.keys(): 
                 data_3d = [key] + voxel_dict[key][0:3] + colors_dict[key] + [0.1] +  voxel_dict[key][3:] 
                 file.write(" ".join(map(str, data_3d)) + "\n")
+
+
+
+        
+    def generate_base_image(self):
+        base_images = {}
+        
+        for image in self.frames.values():  
+            point3D_ids = image.pixel_with_idx[:,2].astype(int)
+            xys = image.pixel_with_idx[:,0:2].copy()
+            image_id = image.image_id
+
+            base_images[image_id] = {'id' :image.image_id, 'qvec' : image.qvec.copy(), 'tvec' : image.t.T[0].copy(),
+                                'camera_id': image.camera_number, 'name' : image.image_name,
+                                'xys' : xys, 'point3D_ids' : point3D_ids.copy()}
+            
+
+        with open(f'{self.sparse_dir}/base_images.pkl', 'wb') as f:
+            pickle.dump(base_images, f)
+        return base_images
+    
+    def generate_cams(self,croped_image = False):
+        cameras = {}
+        for image in self.frames.values(): 
+            intrinsic = image.K_crop if croped_image == True else image.K
+            image_size = image.croped_image.size if croped_image == True else image.image.size
+            params = intrinsic[0,0], intrinsic[1,1], intrinsic[0,2], intrinsic[1,2]
+            cameras[image.camera_number] = {'id' : image.camera_number, 'model' : 'PINHOLE',
+                                                'width' : image_size[0], 'height' : image_size[1],
+                                                'params' : params}
+        
+        with open(f'{self.sparse_dir}/cameras.pkl', 'wb') as f:
+            pickle.dump(cameras, f)
+        return cameras
+    
+
+    def generate_xyz_rgb(self,voxel_dict,colors_dict):
+        xyz = np.vstack([voxel_dict[key][:3] for key in voxel_dict.keys()])
+        rgb = np.vstack([colors_dict[key][:3] for key in colors_dict.keys()])
+        with open(f'{self.sparse_dir}/xyz_rgb.pkl', 'wb') as f:
+            pickle.dump([xyz,rgb], f)
+
+        return xyz,rgb
