@@ -18,14 +18,16 @@ class GaussianSplat():
         """
     def __init__(self,path = None,vertices = None,block_xy = [16,16], image_size = [160,160],sh = None):
         self.path = path
-        self.vertices = PlyData.read(path)["vertex"] if vertices is None else vertices
+        self.vertices =  {prop: np.array(PlyData.read(path)["vertex"].data[prop].tolist()) for prop in PlyData.read(path)["vertex"].data.dtype.names} if vertices is None else vertices
         self.xyz = np.column_stack((self.vertices["x"], self.vertices["y"], self.vertices["z"]))
-        self.scale = np.exp(np.column_stack(([self.vertices["scale_0"], self.vertices["scale_1"], self.vertices["scale_2"]])))
+        if 'scale_2' in self.vertices.keys():
+            self.scale = np.exp(np.column_stack(([self.vertices["scale_0"], self.vertices["scale_1"], self.vertices["scale_2"]])))  
+        else :
+            self.scale = np.exp(np.column_stack(([self.vertices["scale_0"], self.vertices["scale_1"], self.vertices["scale_1"] * 0 + np.log(1.6e-6)])))
+            self.vertices['scale_2'] = self.vertices["scale_1"] * 0 + np.log(1.6e-6)
         self.opacity = 1 / (1 + np.exp(-self.vertices["opacity"]))#self.vertices["opacity"]         
         self.rot = np.column_stack([self.vertices["rot_0"], self.vertices["rot_1"], self.vertices["rot_2"], self.vertices["rot_3"]])
-
-
-        self.sh = np.column_stack([self.vertices[key] for key in self.vertices.data.dtype.names if 'rest' in key or 'dc' in key]) if sh is None else sh
+        self.sh = np.column_stack([self.vertices[key] for key in self.vertices.keys() if 'rest' in key or 'dc' in key]) if sh is None else sh
         self.image_size = image_size
         self.block_xy = block_xy
         self.grid = [int((self.image_size[0] + self.block_xy[0] - 1)/self.block_xy[0]),int((self.image_size[1] + self.block_xy[1] - 1)/self.block_xy[1])]
@@ -72,7 +74,8 @@ class GaussianSplat():
         Returns:
             GaussianSplat: New GaussianSplat instance with filtered vertices.
         """
-        return GaussianSplat(vertices = self.vertices[filter_by], sh = self.sh[filter_by,:],**kwargs)
+        filtered_vertices = {key: self.vertices[key][filter_by] for key in  self.vertices.keys() }
+        return GaussianSplat(vertices = filtered_vertices, sh = self.sh[filter_by,:],**kwargs)
 
     def save_gs(self,name = '_filtered'):
         """
@@ -81,7 +84,12 @@ class GaussianSplat():
         Args:
             name (str): Suffix for the output filename.
         """
-        filtered_element = PlyElement.describe(self.vertices, 'vertex')
+        dtype = [(key, "f4") for key in self.vertices.keys()]
+        # Create a structured array
+        structured_array = np.zeros(len(next(iter(self.vertices.values()))), dtype=dtype)
+        for key in self.vertices:
+            structured_array[key] = self.vertices[key]
+        filtered_element = PlyElement.describe(structured_array, "vertex")
         PlyData([filtered_element]).write(f'{self.path.split(".ply")[0]}{name}.ply')
 
     def q_array_to_rotmat(self,q):
