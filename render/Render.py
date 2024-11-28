@@ -1,6 +1,6 @@
 import numpy as np
 class Render():
-    def __init__(self,gs,cam,tiles = [1,10],block_xy = [16,16], image_size = [160,160]):
+    def __init__(self,gs,cam,tiles = [1,10],block_xy = [16,16], image_size = [160,160],gaus3d = True,filtersze =  0.7071067811865476):
         """
         Initializes the Render class, setting up the Gaussian splats, camera projections, 
         depth sorting, and tiling for efficient rendering.
@@ -12,15 +12,20 @@ class Render():
             block_xy (list): Tile block size for x and y in pixels.
             image_size (list): Dimensions of the output image [height, width].
         """
+        self.gaus3d = gaus3d
+        self.filtersze = filtersze
         pixels = cam.project_with_proj_mat(gs.xyz)
         self.points_camera = cam.rotate_world_to_cam(cam.homogenize_coordinate(gs.xyz))
         idx_by_depth = np.argsort(self.points_camera[:,2])
-        gs = gs
         gs.rearange_gs(idx_by_depth)
         projected_pixels=pixels[idx_by_depth]
         self.block_xy= block_xy
         gs.calc_cov3d()
         gs.calc_cov2d(cam)
+        gs.calculate_T_2d(cam)
+        
+        if gaus3d == False:
+            gs.radius = gs.radius_2d
         self.bounding_box = gs.get_rect(cam)
 
         tile_coords_range = [(x_idx,y_idx) for x_idx in range(tiles[0], tiles[1]) for y_idx in range(tiles[0], tiles[1])]
@@ -29,6 +34,12 @@ class Render():
         self.depth = np.ones((image_size[0],image_size[1],3))
         
 
+    def intersection_point(self,pixel,T):
+        k = -T[..., 0] + pixel[0]*T[...,3]
+        l = -T[..., 1] + pixel[1] * T[..., 3]
+        points = np.cross(k, l, axis=-1)
+        return points[..., :2] / points[..., -1:]
+    
     def calc_pixel_value(self,tile_params,pixel):
         """
         Calculates the pixel value based on Gaussian splats within the tile using the 
@@ -44,7 +55,17 @@ class Render():
         
         d = tile_params['projection'][:,0:2]   - pixel 
         # power is the gaussian distirbuition. we get the amplitude of each gaussian that impact this pixel. 
-        power = -0.5 * (tile_params['conic'][:,0] * d[:,0] * d[:,0] + tile_params['conic'][:,2] * d[:,1] * d[:,1]) - tile_params['conic'][:,1] * d[:,0] * d[:,1]
+        if self.gaus3d == True: 
+            power = -0.5 * (tile_params['conic'][:,0] * d[:,0] * d[:,0] + tile_params['conic'][:,2] * d[:,1] * d[:,1]) - tile_params['conic'][:,1] * d[:,0] * d[:,1]
+            
+        else:
+            s = self.intersection_point(pixel,tile_params['T']) 
+            dist3d = np.sum(s * s, axis=-1)
+            filtersze = self.filtersze#np.sqrt(2) / 20
+            dist_xycenter = pixel - tile_params['center'][ :, :2]
+            dist2d =  (1 / filtersze) ** 2 * (dist_xycenter[:,0]**2 + dist_xycenter[:,1]**2)
+            power = -0.5 * np.minimum(dist3d, dist2d)  # Opacities expanded to match the shape of Gaussians
+
         alpha = np.minimum(0.99,  tile_params['conic'][:,3]*np.exp(power))
         idx_to_keep = (alpha>1/255) & (power <= 0)
         image,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['color'][idx_to_keep])
@@ -87,14 +108,15 @@ class Render():
         pixels_in_tile = self.get_pixels_in_tile(pix_start_end)
         if len(self.tiles[tile]['projection']) > 0:
             for pixel in pixels_in_tile:
-                pixel_value,T,depth = self.calc_pixel_value(self.tiles[tile],pixel)
-                self.rendered_image[pixel[1],pixel[0]] = pixel_value + T*np.array([1,1,1])
+                pixel_value,temp_alpha,depth = self.calc_pixel_value(self.tiles[tile],pixel)
+                self.rendered_image[pixel[1],pixel[0]] = pixel_value + temp_alpha*np.array([1,1,1])
                 self.depth[pixel[1],pixel[0]] = depth 
+        
 
 
 
 
-    def get_current_tile_params(self,gs,x_idx,y_idx,projected_pixels):
+    def get_current_tile_params(self,gs,x_idx,y_idx,projected_pixels,T = None,center = None):
         """
         Gets Gaussian splat parameters for the specified tile.
 
@@ -111,6 +133,9 @@ class Render():
         tile_params = {'xyz': gs.xyz[count_within_bounds], 'conic':gs.conic[count_within_bounds],
                     'color': gs.color[count_within_bounds], 'opacity' : gs.opacity[count_within_bounds],
                     'projection': projected_pixels[count_within_bounds,0:3],'cam_coord': self.points_camera[count_within_bounds]}
+        if self.gaus3d != True:
+             tile_params['T'] = gs.T[count_within_bounds]
+             tile_params['center'] = gs.center[count_within_bounds]
         return tile_params
 
     def sum_all_gs_in_tile(self,alpha,color): 

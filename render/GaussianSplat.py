@@ -20,11 +20,9 @@ class GaussianSplat():
         self.path = path
         self.vertices =  {prop: np.array(PlyData.read(path)["vertex"].data[prop].tolist()) for prop in PlyData.read(path)["vertex"].data.dtype.names} if vertices is None else vertices
         self.xyz = np.column_stack((self.vertices["x"], self.vertices["y"], self.vertices["z"]))
-        if 'scale_2' in self.vertices.keys():
-            self.scale = np.exp(np.column_stack(([self.vertices["scale_0"], self.vertices["scale_1"], self.vertices["scale_2"]])))  
-        else :
-            self.scale = np.exp(np.column_stack(([self.vertices["scale_0"], self.vertices["scale_1"], self.vertices["scale_1"] * 0 + np.log(1.6e-6)])))
-            self.vertices['scale_2'] = self.vertices["scale_1"] * 0 + np.log(1.6e-6)
+        if 'scale_2' not in self.vertices.keys():
+            self.vertices['scale_2'] = self.vertices["scale_1"] * 0 + np.log(1.6e-6) 
+        self.scale = np.exp(np.column_stack(([self.vertices["scale_0"], self.vertices["scale_1"], self.vertices["scale_2"]])))  
         self.opacity = 1 / (1 + np.exp(-self.vertices["opacity"]))#self.vertices["opacity"]         
         self.rot = np.column_stack([self.vertices["rot_0"], self.vertices["rot_1"], self.vertices["rot_2"], self.vertices["rot_3"]])
         self.sh = np.column_stack([self.vertices[key] for key in self.vertices.keys() if 'rest' in key or 'dc' in key]) if sh is None else sh
@@ -41,7 +39,7 @@ class GaussianSplat():
         Args:
             idx_to_rearange (np.array): Array of indices to rearrange vertices and associated properties.
         """
-        self.vertices = self.vertices[idx_to_rearange]
+        # self.vertices = self.vertices[idx_to_rearange]
         self.xyz = self.xyz[idx_to_rearange]
         self.scale = self.scale[idx_to_rearange]
         self.opacity = self.opacity[idx_to_rearange]
@@ -234,6 +232,95 @@ class GaussianSplat():
         self.color = sh_utils.rgb_from_sh(deg,self.sh, **kwargs)
 
 
+    def calculate_T_2d(self,camera):
+        intrins = camera.K.T
+        projmat = np.zeros((4,4))
+        projmat[:3,:3] = intrins
+        projmat[-1,-2] = 1.0
+        projmat = projmat.T
+        rotations = self.build_scaling_rotation(self.scale, self.rot)
+
+        # 1. Viewing transform
+        # Eq.4 and Eq.5
+        viewmat = camera.world_to_cam.T
+        p_view = (self.xyz @ viewmat[:3,:3]) + viewmat[-1:,:3] # rotate the gaussian mean to camera FoR
+        uv_view = (rotations @ viewmat[:3,:3]) # rotate to camera FoR
+
+        # M is H matrix that representes the transformation from tangent plane to camera. 
+        # its the scaled axes concatenated to the gaussian mean location - represented in homogeneous coordinates
+
+        # !! need to check that the order of axes ar ok for M !!
+        M = np.concatenate((self.homogeneous_vec(uv_view[:,:2,:]),self.homogeneous(p_view)[:,np.newaxis]),axis = 1)
+        self.T = M @ projmat # T stands for (WH)^T in Eq.9 - projmat transforms from camera to NDC (screen coordinates)
+        # T is the transformation of every gaussian from tangent plane to NDC, its homogebnus coordinates. with the rotation matrix 
+        # representing the axes and the translation vector representing the location of the center of each gaussian. 
+        # We notice that projmat is a prespective projection matrix. 
+
+        # Next, We calculate the radius of the gaussian. We normalize by w to get homogeneus coordinates. In addition we flip Z axis (not sure why) 
+        # we calculate the distance from the camera to the gaussian mean (this is w, the last row of a homogenues coordinate, deviding by it will give perspective view)
+        # Notice that the rotation is scaled (in build_scaling_rotation) and is not normalized.
+
+        # point_image - the projectes mean of the gaussian (with flipped z)
+        # half_extend - used to calculate the radius of the gaussian, we take 3 sigma. because the ratation is scaled 
+        # we calculate the distance for each axis and can get the 3 sigma by multiplying each distance. (we also devide by w to get the prespective view)
+
+        temp_point = np.tile([1,1,-1],(self.T.shape[0],1))
+        distance  = np.sum(temp_point*self.T[..., 3] * self.T[..., 3],-1)
+        f = (1 / distance[:,np.newaxis]) * temp_point
+        self.center = np.column_stack((np.sum(f * self.T[..., 0] * self.T[...,3],1),np.sum(f * self.T[..., 1] * self.T[...,3],1),np.sum(f * self.T[..., 2] * self.T[...,3],1)))
+        axes_dist = np.column_stack((np.sum(f * self.T[..., 0] * self.T[...,0],1),np.sum(f * self.T[..., 1] * self.T[...,1],1),np.sum(f * self.T[..., 2] * self.T[...,2],1)))
+
+        half_extend = self.center * self.center - axes_dist
+        # self.radius_2d = np.ceil(np.max(np.sqrt(np.maximum(half_extend, 1e-4)) * 3,1),np.sqrt(2) / 2*3)
+        self.radius_2d = np.ceil(np.maximum(np.maximum(half_extend[:,0],half_extend[:,1]),3*0.707))
 
 
+    def build_scaling_rotation(self,s, r):
+        L = np.zeros((s.shape[0], 3, 3))
+        R = self.build_rotation(r)
+
+        L[:,0,0] = s[:,0]
+        L[:,1,1] = s[:,1]
+        L[:,2,2] = s[:,2]
+
+        L = R @ L
+        return L
+
+    def build_rotation(self,r):
+        norm = np.sqrt(r[:,0]*r[:,0] + r[:,1]*r[:,1] + r[:,2]*r[:,2] + r[:,3]*r[:,3])
+
+        q = r / norm[:, None]
+
+        R = np.zeros((q.shape[0], 3, 3))
+
+        r = q[:, 0]
+        x = q[:, 1]
+        y = q[:, 2]
+        z = q[:, 3]
+
+        R[:, 0, 0] = 1 - 2 * (y*y + z*z)
+        R[:, 0, 1] = 2 * (x*y - r*z)
+        R[:, 0, 2] = 2 * (x*z + r*y)
+        R[:, 1, 0] = 2 * (x*y + r*z)
+        R[:, 1, 1] = 1 - 2 * (x*x + z*z)
+        R[:, 1, 2] = 2 * (y*z - r*x)
+        R[:, 2, 0] = 2 * (x*z - r*y)
+        R[:, 2, 1] = 2 * (y*z + r*x)
+        R[:, 2, 2] = 1 - 2 * (x*x + y*y)
+        return R
+
+
+    def homogeneous(self,points):
+        """
+        homogeneous points
+        :param points: [..., 3]
+        """
+        return np.column_stack((points, np.ones(points.shape[0])))
+
+    def homogeneous_vec(self,vec, vectoadd = [0,0]):
+        """
+        homogeneous points
+        :param points: [..., 3]
+        """
+        return np.concatenate((vec,np.tile(np.array([vectoadd]).T,(vec.shape[0],1,1))),axis = 2)
 
