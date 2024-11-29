@@ -233,25 +233,48 @@ class GaussianSplat():
 
 
     def calculate_T_2d(self,camera):
-        intrins = camera.K.T
-        projmat = np.zeros((4,4))
-        projmat[:3,:3] = intrins
-        projmat[-1,-2] = 1.0
-        projmat = projmat.T
+
         rotations = self.build_scaling_rotation(self.scale, self.rot)
+        splat2world = np.hstack((np.transpose(rotations[:,:,0:2],(0,2,1)),self.xyz[:,np.newaxis,:]))
+        splat2world = np.concatenate((splat2world,np.tile(np.array([[0,0,1]]).T,(splat2world.shape[0],1,1))),2)
+        world2ndc = camera.full_proj_transform.T
+        ndc2pix = np.vstack([[160/2,0,0,(160-1)/2],[0,160/2,0,(160-1)/2],[0,0,0,1]])
+        
+        # Transpose splat2world from (3, 4) to (4, 3)
+        # splat2world_T = np.transpose(splat2world, (0, 1, 2))  # (4, 3)
 
-        # 1. Viewing transform
-        # Eq.4 and Eq.5
-        viewmat = camera.world_to_cam.T
-        p_view = (self.xyz @ viewmat[:3,:3]) + viewmat[-1:,:3] # rotate the gaussian mean to camera FoR
-        uv_view = (rotations @ viewmat[:3,:3]) # rotate to camera FoR
+        # Multiply: splat2world_T * world2ndc
+        temp = splat2world @ np.tile(world2ndc,(splat2world.shape[0],1,1))  # (4, 3) @ (4, 4) = (4, 4)
 
-        # M is H matrix that representes the transformation from tangent plane to camera. 
-        # its the scaled axes concatenated to the gaussian mean location - represented in homogeneous coordinates
+        # Final multiplication: temp * ndc2pix
+        self.T = temp @ np.tile(ndc2pix.T,(splat2world.shape[0],1,1))   # (4, 4) @ (4, 3) = (4, 3)
 
-        # !! need to check that the order of axes ar ok for M !!
-        M = np.concatenate((self.homogeneous_vec(uv_view[:,:2,:]),self.homogeneous(p_view)[:,np.newaxis]),axis = 1)
-        self.T = M @ projmat # T stands for (WH)^T in Eq.9 - projmat transforms from camera to NDC (screen coordinates)
+
+
+
+
+
+
+        
+        # intrins = camera.K
+        # projmat = np.zeros((4,4))
+        # projmat[:3,:3] = intrins
+        # projmat[-1,-2] = 1.0
+        # projmat = camera.full_proj_transform.T #projmat.T
+        # rotations = self.build_scaling_rotation(self.scale, self.rot)
+
+        # # 1. Viewing transform
+        # # Eq.4 and Eq.5
+        # viewmat = camera.world_to_cam.T
+        # p_view = (self.xyz @ viewmat[:3,:3]) + viewmat[-1:,:3] # rotate the gaussian mean to camera FoR
+        # uv_view = (rotations @ viewmat[:3,:3]) # rotate to camera FoR
+
+        # # M is H matrix that representes the transformation from tangent plane to camera. 
+        # # its the scaled axes concatenated to the gaussian mean location - represented in homogeneous coordinates
+
+        # # !! need to check that the order of axes ar ok for M !!
+        # M = np.concatenate((self.homogeneous_vec(uv_view[:,:2,:]),self.homogeneous(p_view)[:,np.newaxis]),axis = 1)
+        # self.T = M @ projmat # T stands for (WH)^T in Eq.9 - projmat transforms from camera to NDC (screen coordinates)
         # T is the transformation of every gaussian from tangent plane to NDC, its homogebnus coordinates. with the rotation matrix 
         # representing the axes and the translation vector representing the location of the center of each gaussian. 
         # We notice that projmat is a prespective projection matrix. 
@@ -265,14 +288,13 @@ class GaussianSplat():
         # we calculate the distance for each axis and can get the 3 sigma by multiplying each distance. (we also devide by w to get the prespective view)
 
         temp_point = np.tile([1,1,-1],(self.T.shape[0],1))
-        distance  = np.sum(temp_point*self.T[..., 3] * self.T[..., 3],-1)
+        distance  = np.sum(temp_point*self.T[..., 2] * self.T[..., 2],-1)
         f = (1 / distance[:,np.newaxis]) * temp_point
-        self.center = np.column_stack((np.sum(f * self.T[..., 0] * self.T[...,3],1),np.sum(f * self.T[..., 1] * self.T[...,3],1),np.sum(f * self.T[..., 2] * self.T[...,3],1)))
+        self.center = np.column_stack((np.sum(f * self.T[..., 0] * self.T[...,2],1),np.sum(f * self.T[..., 1] * self.T[...,2],1),np.sum(f * self.T[..., 1] * self.T[...,2],1)))
         axes_dist = np.column_stack((np.sum(f * self.T[..., 0] * self.T[...,0],1),np.sum(f * self.T[..., 1] * self.T[...,1],1),np.sum(f * self.T[..., 2] * self.T[...,2],1)))
 
-        half_extend = self.center * self.center - axes_dist
-        # self.radius_2d = np.ceil(np.max(np.sqrt(np.maximum(half_extend, 1e-4)) * 3,1),np.sqrt(2) / 2*3)
-        self.radius_2d = np.ceil(np.maximum(np.maximum(half_extend[:,0],half_extend[:,1]),3*0.707))
+        half_extend = np.sqrt(np.maximum(self.center * self.center - axes_dist, 1e-4)) * 3
+        self.radius_2d = np.ceil(np.maximum(np.maximum(half_extend[:,0], half_extend[:,1]), 3 * 0.707))
 
 
     def build_scaling_rotation(self,s, r):
@@ -308,19 +330,4 @@ class GaussianSplat():
         R[:, 2, 1] = 2 * (y*z + r*x)
         R[:, 2, 2] = 1 - 2 * (x*x + y*y)
         return R
-
-
-    def homogeneous(self,points):
-        """
-        homogeneous points
-        :param points: [..., 3]
-        """
-        return np.column_stack((points, np.ones(points.shape[0])))
-
-    def homogeneous_vec(self,vec, vectoadd = [0,0]):
-        """
-        homogeneous points
-        :param points: [..., 3]
-        """
-        return np.concatenate((vec,np.tile(np.array([vectoadd]).T,(vec.shape[0],1,1))),axis = 2)
 

@@ -35,8 +35,13 @@ class Render():
         
 
     def intersection_point(self,pixel,T):
-        k = -T[..., 0] + pixel[0]*T[...,3]
-        l = -T[..., 1] + pixel[1] * T[..., 3]
+        # T is a transformation matrix from tangent plane to NDC to pixels.
+        # We start from screen space (pixel coordinates), and transform them to a different coordinate space
+        # using the transformation matrix T. Then we compute the intersection of the transformed directions 
+        # corresponding to the xz and yz planes. The result is normalized by the depth (z-coordinate) to 
+        # project the intersection point onto the tangent plane.   
+        k = -T[..., 0] + pixel[0] * T[...,2]
+        l = -T[..., 1] + pixel[1] * T[..., 2]
         points = np.cross(k, l, axis=-1)
         return points[..., :2] / points[..., -1:]
     
@@ -59,15 +64,22 @@ class Render():
             power = -0.5 * (tile_params['conic'][:,0] * d[:,0] * d[:,0] + tile_params['conic'][:,2] * d[:,1] * d[:,1]) - tile_params['conic'][:,1] * d[:,0] * d[:,1]
             
         else:
-            s = self.intersection_point(pixel,tile_params['T']) 
-            dist3d = np.sum(s * s, axis=-1)
-            filtersze = self.filtersze#np.sqrt(2) / 20
-            dist_xycenter = pixel - tile_params['center'][ :, :2]
-            dist2d =  (1 / filtersze) ** 2 * (dist_xycenter[:,0]**2 + dist_xycenter[:,1]**2)
-            power = -0.5 * np.minimum(dist3d, dist2d)  # Opacities expanded to match the shape of Gaussians
+            s = self.intersection_point(pixel,tile_params['T']) # get the ray from the pixel to the gaussian as seen in the tangent plane
+            dist3d = np.sum(s * s, axis=-1) # a 2d gaussian is defined G(u,v) = exp(-(u^2+v^2)/2*sigma^2), here we calculate u^2 + v^2 (everything in object plane)
+            dist2d =  (1 / self.filtersze) ** 2 * np.linalg.norm(pixel - tile_params['center'][ :, :2], axis=-1) ** 2
+            # Compute the squared screen-space distance (x - mu)^2, where mu is the Gaussian's projected mean 
+            # and x is the pixel position.
+            # When a 2D Gaussian is observed from a slanted viewpoint, it can degenerate into a line in screen space. 
+            # This can result in rasterization artifacts where the Gaussian is under-sampled or missed entirely.
+            # To address this, we define a fallback Gaussian centered at the projected mean of the original Gaussian 
+            # in screen space. We use the smaller of dist3d (tangent-plane distance) and dist2d (screen-space distance) 
+            # to ensure coverage.
+            # If dist2d < dist3d, it indicates that distortions in the tangent plane (e.g., due to perspective effects) 
+            # are significant. In this case, the screen-space Gaussian serves as a low-pass filter to stabilize the rendering.
+            power = -0.5 * np.minimum(dist3d, dist2d)  
 
         alpha = np.minimum(0.99,  tile_params['conic'][:,3]*np.exp(power))
-        idx_to_keep = (alpha>1/255) & (power <= 0)
+        idx_to_keep = (alpha>=1/255) & (power <= 0)
         image,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['color'][idx_to_keep])
         depth,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['cam_coord'][idx_to_keep,2])
 
@@ -154,7 +166,7 @@ class Render():
         for trans,col in zip(alpha,color): 
             clr += col*trans*T
             T = T*(1-trans)
-            if T < 0.0000001:
+            if T < 0.0001:
                 break
         return clr,T
     
