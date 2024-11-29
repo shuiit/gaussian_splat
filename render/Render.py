@@ -35,11 +35,20 @@ class Render():
         
 
     def intersection_point(self,pixel,T):
-        # T is a transformation matrix from tangent plane to NDC to pixels.
-        # We start from screen space (pixel coordinates), and transform them to a different coordinate space
-        # using the transformation matrix T. Then we compute the intersection of the transformed directions 
-        # corresponding to the xz and yz planes. The result is normalized by the depth (z-coordinate) to 
-        # project the intersection point onto the tangent plane.   
+        # For each pixel, the xz and yz planes are transformed differently due to the effects of perspective projection.
+        #( This means that the xz and yz planes are no longer aligned with the camera's standard axes, 
+        # but are instead dynamically re-oriented based on the pixel's location in screen space. )
+        # T is a transformation matrix that maps points from the tangent plane to NDC (Normalized Device Coordinates) 
+        # and subsequently to pixel space.       
+        # This function computes the intersection point of a ray (originating from the pixel) with the tangent plane.
+        # 1. Starting with pixel coordinates, we use T to compute directional vectors in object space.
+        # 2. The vectors k and l represent directions derived from the transformation matrix T:
+        #    - k corresponds to the xz-plane
+        #    - l corresponds to the yz-plane
+        # 3. The cross product of these directions yields the intersection point in homogeneous coordinates.
+        #    (The intersection gives the direction of the ray originating at the camera center and passing through the specified pixel)
+        # 4. Finally, the point is normalized by dividing by its depth (z-coordinate) to project it onto the tangent plane.
+
         k = -T[..., 0] + pixel[0] * T[...,2]
         l = -T[..., 1] + pixel[1] * T[..., 2]
         points = np.cross(k, l, axis=-1)
