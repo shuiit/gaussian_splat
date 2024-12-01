@@ -172,7 +172,11 @@ class Frame(Camera):
         proj = self.project_on_image(homo_voxels_with_idx,croped_camera_matrix = True)
 
         idx_round = np.round(np.fliplr(proj)).astype(int)
-        return np.array(image)[idx_round[:,0],idx_round[:,1]] == 0
+        idx_to_keep = np.array([True]*idx_round.shape[0])
+        pixels_in_image = ((idx_round > 0) & (idx_round <  self.croped_image_size[1])).all(1)
+        idx_bg = np.array(image)[idx_round[pixels_in_image,0],idx_round[pixels_in_image,1]] == 0
+        idx_to_keep[pixels_in_image] = idx_bg
+        return idx_to_keep
 
 
     

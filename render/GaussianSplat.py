@@ -233,57 +233,37 @@ class GaussianSplat():
 
 
     def calculate_T_2d(self,camera):
-
-        rotations = self.build_scaling_rotation(self.scale, self.rot)
-        splat2world = np.hstack((np.transpose(rotations[:,:,0:2],(0,2,1)),self.xyz[:,np.newaxis,:]))
-        splat2world = np.concatenate((splat2world,np.tile(np.array([[0,0,1]]).T,(splat2world.shape[0],1,1))),2)
-        world2ndc = camera.full_proj_transform.T
-        ndc2pix = np.vstack([[160/2,0,0,(160-1)/2],[0,160/2,0,(160-1)/2],[0,0,0,1]])
+        # calculate T: 
         
-        # Transpose splat2world from (3, 4) to (4, 3)
-        # splat2world_T = np.transpose(splat2world, (0, 1, 2))  # (4, 3)
+        # T stands for (WH)^T in Eq.9 - projmat transforms from camera to NDC (screen coordinates)
+        # T is the transformation of every gaussian from tangent plane to NDC (here its pixel), its homogebnus coordinates. with the rotation matrix 
+        # representing the axes and the translation vector representing the location of the center of each gaussian (in camera coordinates). 
+        # 1. Scale (defines the splat)
+        # 2. [Scale * axes | mean_splat xyz] transformation to world
+        # 3. multiply 2 by camera.full_proj_transform.T (transformation to camera (perspective))
+        # 4. multiply by ndc2pix to get the projection in pixels
 
-        # Multiply: splat2world_T * world2ndc
+        # get the direction of the axes and the scale of each axis of the gaussian (world)
+        rotations = self.build_scaling_rotation(self.scale, self.rot) 
+        # define the transformation matrix of the gaussian from object to world (in homogenues coordinates)
+        splat2world = np.hstack((np.transpose(rotations[:,:,0:2],(0,2,1)),self.xyz[:,np.newaxis,:])) 
+        splat2world = np.concatenate((splat2world,np.tile(np.array([[0,0,1]]).T,(splat2world.shape[0],1,1))),2)
+        # get the transformation from world to ndc (using the projection matrix)
+        world2ndc = camera.full_proj_transform.T
+        # get the transformation from ndc to pixel
+        ndc2pix = np.vstack([[ self.image_size[0]/2,0,0,( self.image_size[0]-1)/2],[0, self.image_size[1]/2,0,( self.image_size[1]-1)/2],[0,0,0,1]])
+        
+        # Multiply: splat2world * world2ndc - transformation from splat to ndc
         temp = splat2world @ np.tile(world2ndc,(splat2world.shape[0],1,1))  # (4, 3) @ (4, 4) = (4, 4)
-
-        # Final multiplication: temp * ndc2pix
+        # Multiply: splat2ndc * ndc2pix - transformation from splat to pixel
         self.T = temp @ np.tile(ndc2pix.T,(splat2world.shape[0],1,1))   # (4, 4) @ (4, 3) = (4, 3)
 
-
-
-
-
-
-
-        
-        # intrins = camera.K
-        # projmat = np.zeros((4,4))
-        # projmat[:3,:3] = intrins
-        # projmat[-1,-2] = 1.0
-        # projmat = camera.full_proj_transform.T #projmat.T
-        # rotations = self.build_scaling_rotation(self.scale, self.rot)
-
-        # # 1. Viewing transform
-        # # Eq.4 and Eq.5
-        # viewmat = camera.world_to_cam.T
-        # p_view = (self.xyz @ viewmat[:3,:3]) + viewmat[-1:,:3] # rotate the gaussian mean to camera FoR
-        # uv_view = (rotations @ viewmat[:3,:3]) # rotate to camera FoR
-
-        # # M is H matrix that representes the transformation from tangent plane to camera. 
-        # # its the scaled axes concatenated to the gaussian mean location - represented in homogeneous coordinates
-
-        # # !! need to check that the order of axes ar ok for M !!
-        # M = np.concatenate((self.homogeneous_vec(uv_view[:,:2,:]),self.homogeneous(p_view)[:,np.newaxis]),axis = 1)
-        # self.T = M @ projmat # T stands for (WH)^T in Eq.9 - projmat transforms from camera to NDC (screen coordinates)
-        # T is the transformation of every gaussian from tangent plane to NDC, its homogebnus coordinates. with the rotation matrix 
-        # representing the axes and the translation vector representing the location of the center of each gaussian. 
-        # We notice that projmat is a prespective projection matrix. 
 
         # Next, We calculate the radius of the gaussian. We normalize by w to get homogeneus coordinates. In addition we flip Z axis (not sure why) 
         # we calculate the distance from the camera to the gaussian mean (this is w, the last row of a homogenues coordinate, deviding by it will give perspective view)
         # Notice that the rotation is scaled (in build_scaling_rotation) and is not normalized.
 
-        # point_image - the projectes mean of the gaussian (with flipped z)
+        # self.center - the projectes mean of the gaussian (with flipped z)
         # half_extend - used to calculate the radius of the gaussian, we take 3 sigma. because the ratation is scaled 
         # we calculate the distance for each axis and can get the 3 sigma by multiplying each distance. (we also devide by w to get the prespective view)
 
