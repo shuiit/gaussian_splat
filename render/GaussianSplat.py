@@ -267,14 +267,14 @@ class GaussianSplat():
         # half_extend - used to calculate the radius of the gaussian, we take 3 sigma. because the ratation is scaled 
         # we calculate the distance for each axis and can get the 3 sigma by multiplying each distance. (we also devide by w to get the prespective view)
 
-        temp_point = np.tile([1,1,-1],(self.T.shape[0],1))
+        temp_point = np.tile([9,9,-1],(self.T.shape[0],1))
         distance  = np.sum(temp_point*self.T[..., 2] * self.T[..., 2],-1)
         f = (1 / distance[:,np.newaxis]) * temp_point
         self.center = np.column_stack((np.sum(f * self.T[..., 0] * self.T[...,2],1),np.sum(f * self.T[..., 1] * self.T[...,2],1),np.sum(f * self.T[..., 1] * self.T[...,2],1)))
         axes_dist = np.column_stack((np.sum(f * self.T[..., 0] * self.T[...,0],1),np.sum(f * self.T[..., 1] * self.T[...,1],1),np.sum(f * self.T[..., 2] * self.T[...,2],1)))
 
         half_extend = np.sqrt(np.maximum(self.center * self.center - axes_dist, 1e-4)) * 3
-        self.radius_2d = np.ceil(np.maximum(np.maximum(half_extend[:,0], half_extend[:,1]), 3 * 0.707))
+        self.radius_2d = np.ceil(np.maximum(np.maximum(half_extend[:,0], half_extend[:,1]), 3 * 2))
 
 
     def build_scaling_rotation(self,s, r):

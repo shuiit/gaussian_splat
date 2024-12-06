@@ -32,6 +32,7 @@ class Render():
         self.tiles = {(x_idx,y_idx): self.get_current_tile_params(gs,x_idx,y_idx,projected_pixels) for x_idx,y_idx in tile_coords_range}
         self.rendered_image = np.ones((image_size[0],image_size[1],3))
         self.depth = np.ones((image_size[0],image_size[1],3))
+        self.distortion = np.ones((image_size[0],image_size[1],1))
         
 
     def intersection_point(self,pixel,T):
@@ -66,7 +67,8 @@ class Render():
         Returns:
             tuple: Color value for the pixel and remaining transparency.
         """
-        
+        far_n = 10
+        near_n = 0.01
         d = tile_params['projection'][:,0:2]   - pixel 
         # power is the gaussian distirbuition. we get the amplitude of each gaussian that impact this pixel. 
         if self.gaus3d == True: 
@@ -75,7 +77,12 @@ class Render():
         else:
             s = self.intersection_point(pixel,tile_params['T']) # get the ray from the pixel to the gaussian as seen in the tangent plane
             dist3d = np.sum(s * s, axis=-1) # a 2d gaussian is defined G(u,v) = exp(-(u^2+v^2)/2*sigma^2), here we calculate u^2 + v^2 (everything in object plane)
-            dist2d =  (1 / self.filtersze) ** 2 * np.linalg.norm(pixel - tile_params['center'][ :, :2], axis=-1) ** 2
+            dist = pixel - tile_params['center'][ :, :2]
+            # dist2d =  (1 / self.filtersze) ** 2 * np.linalg.norm(pixel - tile_params['center'][ :, :2], axis=-1) ** 2
+            dist2d =  (1 / self.filtersze) ** 2 * (dist[:,0]*dist[:,0] + dist[:,1]*dist[:,1])
+            depth_for_distortion = (s[:,0]*tile_params['T'][:,0,2] + s[:,1]*tile_params['T'][:,1,2]) + tile_params['T'][:,2,2]
+            m = far_n / (far_n - near_n) * (1 - near_n / depth_for_distortion)
+
             # Compute the squared screen-space distance (x - mu)^2, where mu is the Gaussian's projected mean 
             # and x is the pixel position.
             # When a 2D Gaussian is observed from a slanted viewpoint, it can degenerate into a line in screen space. 
@@ -91,8 +98,11 @@ class Render():
         idx_to_keep = (alpha>=1/255) & (power <= 0)
         image,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['color'][idx_to_keep])
         depth,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['cam_coord'][idx_to_keep,2])
-
-        return image,T,np.array(depth)
+        distortion,T = self.sum_all_depth_in_tile(alpha[idx_to_keep],m[idx_to_keep])
+        if len(distortion) > 1:
+            wakk = 2
+            distortion,T = self.sum_all_depth_in_tile(alpha[idx_to_keep],m[idx_to_keep])
+        return image,T,np.array(depth),distortion
 
     def get_pixels_in_tile(self,pix_start_end):
         """
@@ -129,10 +139,11 @@ class Render():
         pixels_in_tile = self.get_pixels_in_tile(pix_start_end)
         if len(self.tiles[tile]['projection']) > 0:
             for pixel in pixels_in_tile:
-                pixel_value,temp_alpha,depth = self.calc_pixel_value(self.tiles[tile],pixel)
+                pixel_value,temp_alpha,depth,distortion = self.calc_pixel_value(self.tiles[tile],pixel)
                 self.rendered_image[pixel[1],pixel[0]] = pixel_value + temp_alpha*np.array([1,1,1])
                 self.depth[pixel[1],pixel[0]] = depth 
-        
+                self.distortion[pixel[1],pixel[0]] = distortion 
+
 
 
 
@@ -178,6 +189,31 @@ class Render():
             if T < 0.0001:
                 break
         return clr,T
+    
+
+    
+    def sum_all_depth_in_tile(self,alpha,m): 
+        """
+        Blends the colors of all Gaussian splats within a tile based on their alpha values.
+
+        Args:
+            alpha (np.array): Alpha values of the Gaussian splats.
+            color (np.array): Color values of the Gaussian splats.
+
+        Returns:
+            tuple: Blended color value and remaining transparency.
+        """
+        T = 1
+        M1,M2 = 0,0
+        
+        distortion = [0]
+        for trans,depth in zip(alpha,m): 
+            A = 1 - trans
+            distortion += (depth*depth*A + M2 -2*depth*M1) * T
+            T = T*(1-trans)
+            if T < 0.0001:
+                break
+        return distortion,T
     
 
         
