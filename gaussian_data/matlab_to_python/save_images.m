@@ -4,7 +4,7 @@ function save_images(sp,save_path)
 frameSize = [800,1280]
 
 for cam = 1:1:4
-for frame = 1:1:500%length(sp{cam}.frames)
+for frame = 1:1:length(sp{cam}.frames)
      indim = sp{cam}.frames(frame).indIm;
 
     if cam == 1
