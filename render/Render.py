@@ -33,8 +33,9 @@ class Render():
         self.rendered_image = np.ones((image_size[0],image_size[1],3))
         self.depth = np.ones((image_size[0],image_size[1],3))
         self.distortion = np.ones((image_size[0],image_size[1],1))
-        
-
+        self.median_depth = np.ones((image_size[0],image_size[1],1))
+        self.normal_map = np.ones((image_size[0],image_size[1],3))
+        self.alpha_map = np.ones((image_size[0],image_size[1],1))
     def intersection_point(self,pixel,T):
         # For each pixel, the xz and yz planes are transformed differently due to the effects of perspective projection.
         #( This means that the xz and yz planes are no longer aligned with the camera's standard axes, 
@@ -98,11 +99,9 @@ class Render():
         idx_to_keep = (alpha>=1/255) & (power <= 0)
         image,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['color'][idx_to_keep])
         depth,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['cam_coord'][idx_to_keep,2])
-        distortion,T = self.sum_all_depth_in_tile(alpha[idx_to_keep],m[idx_to_keep])
-        if len(distortion) > 1:
-            wakk = 2
-            distortion,T = self.sum_all_depth_in_tile(alpha[idx_to_keep],m[idx_to_keep])
-        return image,T,np.array(depth),distortion
+        distortion,T,median_depth = self.sum_all_depth_in_tile(alpha[idx_to_keep],m[idx_to_keep])
+        normals,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['normal'][idx_to_keep])
+        return image,T,np.array(depth),distortion,median_depth,normals
 
     def get_pixels_in_tile(self,pix_start_end):
         """
@@ -139,11 +138,13 @@ class Render():
         pixels_in_tile = self.get_pixels_in_tile(pix_start_end)
         if len(self.tiles[tile]['projection']) > 0:
             for pixel in pixels_in_tile:
-                pixel_value,temp_alpha,depth,distortion = self.calc_pixel_value(self.tiles[tile],pixel)
+                pixel_value,temp_alpha,depth,distortion,median_depth,normals = self.calc_pixel_value(self.tiles[tile],pixel)
                 self.rendered_image[pixel[1],pixel[0]] = pixel_value + temp_alpha*np.array([1,1,1])
                 self.depth[pixel[1],pixel[0]] = depth 
                 self.distortion[pixel[1],pixel[0]] = distortion 
-
+                self.median_depth[pixel[1],pixel[0]] = median_depth 
+                self.normal_map[pixel[1],pixel[0]] = normals
+                self.alpha_map[pixel[1],pixel[0]] = 1 - temp_alpha
 
 
 
@@ -168,6 +169,8 @@ class Render():
         if self.gaus3d != True:
              tile_params['T'] = gs.T[count_within_bounds]
              tile_params['center'] = gs.center[count_within_bounds]
+             tile_params['normal'] = gs.normal_to_splat_camera[count_within_bounds]
+
         return tile_params
 
     def sum_all_gs_in_tile(self,alpha,color): 
@@ -205,15 +208,17 @@ class Render():
         """
         T = 1
         M1,M2 = 0,0
-        
+        median_depth = 0
         distortion = [0]
         for trans,depth in zip(alpha,m): 
             A = 1 - trans
             distortion += (depth*depth*A + M2 -2*depth*M1) * T
             T = T*(1-trans)
+            if T > 0.5:
+                median_depth = depth
             if T < 0.0001:
                 break
-        return distortion,T
+        return distortion,T,median_depth
     
 
         

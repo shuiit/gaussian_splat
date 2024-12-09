@@ -21,10 +21,11 @@ class GaussianSplat():
         self.vertices =  {prop: np.array(PlyData.read(path)["vertex"].data[prop].tolist()) for prop in PlyData.read(path)["vertex"].data.dtype.names} if vertices is None else vertices
         self.xyz = np.column_stack((self.vertices["x"], self.vertices["y"], self.vertices["z"]))
         if 'scale_2' not in self.vertices.keys():
-            self.vertices['scale_2'] = self.vertices["scale_1"] * 0 + np.log(1.6e-6) 
+            self.vertices['scale_2'] = self.vertices["scale_1"] * 0 + np.log(1.6e-10) 
         self.scale = np.exp(np.column_stack(([self.vertices["scale_0"], self.vertices["scale_1"], self.vertices["scale_2"]])))  
         self.opacity = 1 / (1 + np.exp(-self.vertices["opacity"]))#self.vertices["opacity"]         
         self.rot = np.column_stack([self.vertices["rot_0"], self.vertices["rot_1"], self.vertices["rot_2"], self.vertices["rot_3"]])
+        self.rot = self.rot/np.linalg.norm(self.rot,axis = 1)[:,np.newaxis]
         self.sh = np.column_stack([self.vertices[key] for key in self.vertices.keys() if 'rest' in key or 'dc' in key]) if sh is None else sh
         self.image_size = image_size
         self.block_xy = block_xy
@@ -245,6 +246,18 @@ class GaussianSplat():
 
         # get the direction of the axes and the scale of each axis of the gaussian (world)
         rotations = self.build_scaling_rotation(self.scale, self.rot) 
+        
+
+        # use the Z direction of the 2d splat as a normal to the splat. rotate it to camera axes
+        self.normal_to_splat_camera = np.dot(camera.world_to_cam[:,:3],rotations[:,:,2].T ).T
+
+        # rotate the xyz points to camera 
+        self.p_orig = np.dot(camera.world_to_cam[:,:3],self.xyz.T ).T
+
+        normal_surface_direction = -np.sum(self.p_orig*self.normal_to_splat_camera,axis = 1)
+        self.normal_to_splat_camera[normal_surface_direction < 0] = -self.normal_to_splat_camera[normal_surface_direction < 0]
+        self.normal_to_splat_camera = self.normal_to_splat_camera/np.linalg.norm(self.normal_to_splat_camera,axis = 1)[:,np.newaxis]
+
         # define the transformation matrix of the gaussian from object to world (in homogenues coordinates)
         splat2world = np.hstack((np.transpose(rotations[:,:,0:2],(0,2,1)),self.xyz[:,np.newaxis,:])) 
         splat2world = np.concatenate((splat2world,np.tile(np.array([[0,0,1]]).T,(splat2world.shape[0],1,1))),2)
