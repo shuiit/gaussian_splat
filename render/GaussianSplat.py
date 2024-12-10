@@ -246,8 +246,8 @@ class GaussianSplat():
 
         # get the direction of the axes and the scale of each axis of the gaussian (world)
         rotations = self.build_scaling_rotation(self.scale, self.rot) 
-        
-
+        self.rotation = rotations
+        self.normal =  rotations[:,:,2]
         # use the Z direction of the 2d splat as a normal to the splat. rotate it to camera axes
         self.normal_to_splat_camera = np.dot(camera.world_to_cam[:,:3],rotations[:,:,2].T ).T
 
@@ -288,6 +288,7 @@ class GaussianSplat():
 
         half_extend = np.sqrt(np.maximum(self.center * self.center - axes_dist, 1e-4)) * 3
         self.radius_2d = np.ceil(np.maximum(np.maximum(half_extend[:,0], half_extend[:,1]), 3 * 2))
+        self.axes = half_extend
 
 
     def build_scaling_rotation(self,s, r):
