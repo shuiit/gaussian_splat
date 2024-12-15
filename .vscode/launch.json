@@ -21,49 +21,49 @@
 // }
 
 
-// {
-//     "version": "0.2.0",
-//     "configurations": [
-//         {
-//             "name": "Python: Train Model",
-//             "type": "debugpy-old",
-//             "request": "launch",
-//             "program": "${workspaceFolder}/2d-gaussian-splatting/train.py",
-//             "console": "integratedTerminal",
-//             "justMyCode": false,     
-//             // "env": {
-//             //     "PYTHONPATH": "${workspaceFolder}" 
-//             //   },                               
-//             "args": [
-//                 "-s",
-//                 "D:/Documents/gs_mov_trans/bowl_with_lego"
-//             ],
-            
-//         },        
-//     ]
-// }
-
-
 {
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: render.py",
+            "name": "Python: Train Model",
             "type": "debugpy-old",
             "request": "launch",
-            "program": "${workspaceFolder}/2d-gaussian-splatting/render.py",
+            "program": "${workspaceFolder}/2d-gaussian-splatting/train.py",
             "console": "integratedTerminal",
             "justMyCode": false,     
             // "env": {
             //     "PYTHONPATH": "${workspaceFolder}" 
             //   },                               
             "args": [
-                "--model_path",
-                "D:/Documents/gaussian_splat/output/d867e105-f",
-                
-                
-                            ],
+                "-s",
+                "D:/Documents/gs_mov_trans/bowl_with_lego"
+            ],
             
         },        
     ]
 }
+
+
+// {
+//     "version": "0.2.0",
+//     "configurations": [
+//         {
+//             "name": "Python: render.py",
+//             "type": "debugpy-old",
+//             "request": "launch",
+//             "program": "${workspaceFolder}/2d-gaussian-splatting/render.py",
+//             "console": "integratedTerminal",
+//             "justMyCode": false,     
+//             // "env": {
+//             //     "PYTHONPATH": "${workspaceFolder}" 
+//             //   },                               
+//             "args": [
+//                 "--model_path",
+//                 "D:/Documents/gaussian_splat/output/d867e105-f",
+                
+                
+//                             ],
+            
+//         },        
+//     ]
+// }
