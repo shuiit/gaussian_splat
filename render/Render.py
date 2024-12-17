@@ -22,9 +22,10 @@ class Render():
         self.block_xy= block_xy
         gs.calc_cov3d()
         gs.calc_cov2d(cam)
-        gs.calculate_T_2d(cam)
         
         if gaus3d == False:
+            gs.calculate_T_2d(cam)
+
             gs.radius = gs.radius_2d
         self.bounding_box = gs.get_rect(cam)
 
@@ -70,6 +71,7 @@ class Render():
         """
         far_n = 10
         near_n = 0.01
+        distortion,normals,median_depth = 0,0,0
         d = tile_params['projection'][:,0:2]   - pixel 
         # power is the gaussian distirbuition. we get the amplitude of each gaussian that impact this pixel. 
         if self.gaus3d == True: 
@@ -99,8 +101,9 @@ class Render():
         idx_to_keep = (alpha>=1/255) & (power <= 0)
         image,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['color'][idx_to_keep])
         depth,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['cam_coord'][idx_to_keep,2])
-        distortion,T,median_depth = self.sum_all_depth_in_tile(alpha[idx_to_keep],m[idx_to_keep])
-        normals,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['normal'][idx_to_keep])
+        if self.gaus3d == False:
+            distortion,T,median_depth = self.sum_all_depth_in_tile(alpha[idx_to_keep],m[idx_to_keep])
+            normals,T = self.sum_all_gs_in_tile(alpha[idx_to_keep],tile_params['normal'][idx_to_keep])
         return image,T,np.array(depth),distortion,median_depth,normals
 
     def get_pixels_in_tile(self,pix_start_end):
@@ -124,7 +127,7 @@ class Render():
             np.array: The rendered image as a 3D numpy array (height, width, color channels).
         """
         [self.calc_pixels_value_in_tile(tile) for tile in self.tiles]
-        return self.rendered_image
+        return self.rendered_image, self.depth
 
 
     def calc_pixels_value_in_tile(self,tile):
