@@ -21,49 +21,50 @@
 // }
 
 
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Python: Train Model",
-            "type": "debugpy-old",
-            "request": "launch",
-            "program": "${workspaceFolder}/2d-gaussian-splatting/train.py",
-            "console": "integratedTerminal",
-            "justMyCode": false,     
-            // "env": {
-            //     "PYTHONPATH": "${workspaceFolder}" 
-            //   },                               
-            "args": [
-                "-s",
-                "D:/Documents/gs_mov_trans/bowl_with_lego"
-            ],
-            
-        },        
-    ]
-}
-
-
 // {
 //     "version": "0.2.0",
 //     "configurations": [
 //         {
-//             "name": "Python: render.py",
+//             "name": "Python: Train Model",
 //             "type": "debugpy-old",
 //             "request": "launch",
-//             "program": "${workspaceFolder}/2d-gaussian-splatting/render.py",
+//             "program": "${workspaceFolder}/2d-gaussian-splatting/train.py",
 //             "console": "integratedTerminal",
 //             "justMyCode": false,     
 //             // "env": {
 //             //     "PYTHONPATH": "${workspaceFolder}" 
 //             //   },                               
 //             "args": [
-//                 "--model_path",
-//                 "D:/Documents/gs_output/lego_bowl_2d_dr1_ld0",
-                
-                
-//                             ],
+//                 "-s",
+//                 "D:/Documents/gs_mov_trans/bowl_with_lego"
+//             ],
             
 //         },        
 //     ]
 // }
+
+
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: render.py",
+            "type": "debugpy-old",
+            "request": "launch",
+            "program": "${workspaceFolder}/2d-gaussian-splatting/render.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,     
+            // "env": {
+            //     "PYTHONPATH": "${workspaceFolder}" 
+            //   },                               
+            "args": [
+                "--model_path",
+                "G:/My Drive/Research/gs_data/mov19_2022_03_03/time_2d_dens_interval_output/iterations_5000_densification_interval_700_ld_5_densify_until4000_ln05_lr001_ori_100_dr0/1407",
+                "--source_path",
+                "G:/My Drive/Research/gs_data/mov19_2022_03_03/input_data_for_gs"
+                
+                            ],
+            
+        },        
+    ]
+}
