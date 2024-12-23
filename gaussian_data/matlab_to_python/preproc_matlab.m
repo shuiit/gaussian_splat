@@ -26,7 +26,7 @@ for cam = 1:1:4
 end
 
 %%
-path = 'G:\My Drive\Research\gs_data\'
+path = 'G:\My Drive\Research\gaussian_splatting\gaussian_splatting_input\'
 save_path = [path,mov_name,'_',exp,'\','3d_pts','\']
 mkdir(save_path)
 
@@ -37,8 +37,8 @@ hull_mat_file(hull3d.leftwing.hull.hull3d,[save_path,'lwing.mat'],hull3d.frames)
 
 real_coord(Shull,[save_path,'real_coord.mat'])
 %%
-path = 'G:\My Drive\Research\gs_data\'
-path = 'D:\Documents\'
+% path = 'G:\My Drive\Research\gs_data\'
+% path = 'G:\My Drive\Research\gaussian_splatting\gaussian_splatting_input\'
 
 save_path = [path,mov_name,'_',exp,'\','images','\']
 mkdir(save_path)
