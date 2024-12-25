@@ -12,10 +12,14 @@ for frame = 1:1:length(sp{cam}.frames)
 
     end
 
-    im_name = sprintf('P%dCAM%d.jpg',frame,cam);
+    im_name = sprintf('P%dCAM%d.mat',frame,cam);
     [Im] = ImfromSp(frameSize,indim);
-    im = im2gray(double(Im/255/255));
-    imwrite(im,[save_path,im_name]);
+    im = im2gray(Im/255/255);
+    bg = Im == 0;
+    im = im.*(1-bg*1);
+    % imwrite(uint8(im * 255),[save_path,im_name],'Quality', 100);
+    save([save_path,im_name],'im')
+
 end
 end
 end

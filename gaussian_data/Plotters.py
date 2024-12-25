@@ -22,20 +22,28 @@ Created on Mon Jun  5 08:25:02 2023
 """
 
 
-def scatter3d(fig,data,color,size,opa = 1,colorscale = 'gray'):
+def scatter3d(fig,data,color,size,legend,opa = 1,colorscale = 'gray',show_colorbar=True):
+    marker_dict = dict(
+        color=color,  # Set marker color
+        size=size,  # Set marker size
+        colorscale=colorscale,
+        opacity=opa
+    )
+    # Conditionally add the colorbar
+    if show_colorbar:
+        marker_dict["colorbar"] = dict(title="Colorbar")
+
+    
+      
     fig.add_trace(go.Scatter3d(
-        x=data[:,0],
-        y=data[:,1],
-        z=data[:,2],
+        x=data[:, 0],
+        y=data[:, 1],
+        z=data[:, 2],
         mode='markers',
-        marker=dict(
-            color=color,  # Set marker color to green
-            size=size,  # Set marker size to small
-            colorscale=colorscale,
-            colorbar=dict(title="Colorbar"),
-            opacity = opa
-        )
-        ))
+        marker=marker_dict,
+        name = legend
+    ))
+    
     # Update layout to set aspectmode to 'cube'
     fig.update_layout(scene=dict(
         aspectmode='data'  # Ensures x, y, z axes have the same scale

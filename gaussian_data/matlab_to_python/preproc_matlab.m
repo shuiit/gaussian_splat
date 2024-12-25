@@ -3,12 +3,12 @@ clear
 close all
 clc
 
-exp = '2022_03_03'
-path = 'H:\My Drive\dark 2022\2022_03_03\hull\hull_Reorder\'
-easyWand_name = '3+4_post_03_03_2022_skip5_easyWandData.mat'
+exp = '2024_11_12_darkan'
+path = 'H:\My Drive\dark 2022\2024_11_12_darkan\hull\hull_Reorder\'
+easyWand_name = 'coefs_12_11_24_easyWandData.mat'
 
 
-movie = 19
+movie = 30
 mov_name = sprintf('mov%d',movie)
 struct_file_name = sprintf('\\Shull_mov%d',movie)
 load([path,mov_name,'\hull_op\',struct_file_name])
@@ -18,11 +18,22 @@ load([path,mov_name,'\hull_op\',hull3d_file_name])
 
 load([path,easyWand_name])
 
+save_path = [path,mov_name,'_',exp,'\','images','\']
 
+save_path_parent =  'G:\My Drive\Research\gaussian_splatting\gaussian_splatting_input\'
+
+save_images_dir = [save_path_parent,mov_name,'_',exp,'\','images','\'];
+mkdir(save_images_dir)
 % load sparse
 for cam = 1:1:4
+    
+
     sparse_file = sprintf('\\mov%d_cam%d_sparse.mat',movie,cam)
     sp{cam} = load([path,mov_name,sparse_file])
+    im_name = [mov_name,'_bg','.mat']
+    bg = sp{cam}.metaData.bg;
+    save([save_images_dir,im_name],'bg')
+
 end
 
 %%
@@ -37,8 +48,7 @@ hull_mat_file(hull3d.leftwing.hull.hull3d,[save_path,'lwing.mat'],hull3d.frames)
 
 real_coord(Shull,[save_path,'real_coord.mat'])
 %%
-% path = 'G:\My Drive\Research\gs_data\'
-% path = 'G:\My Drive\Research\gaussian_splatting\gaussian_splatting_input\'
+path = 'G:\My Drive\Research\gaussian_splatting\gaussian_splatting_input\'
 
 save_path = [path,mov_name,'_',exp,'\','images','\']
 mkdir(save_path)
