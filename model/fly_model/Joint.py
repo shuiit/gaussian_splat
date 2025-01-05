@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Joint:
-    def __init__(self,name, parent = None,translation_from_parent = [0,0,0],wing = 0):
+    def __init__(self,name, parent = None,translation_from_parent = [0,0,0],wing = 0, joint_without_bone = False):
         self.name = name
         self.parent = parent
         self.child = []
@@ -12,6 +12,8 @@ class Joint:
         self.local_transformation = self.transformation_matrix()
         self.wing = wing
         self.global_transformation = np.eye(4)
+        self.joint_without_bone = joint_without_bone
+        self.bone = None
         
 
     def add_child(self,child):
@@ -34,14 +36,18 @@ class Joint:
     def set_local_transformation(self):
         self.local_transformation = self.transformation_matrix()
 
-    def get_global_transformation(self):
+    def get_global_transformation(self, rest_bind = False):
         if self.parent == None:
             return self.local_transformation
         self.global_transformation = self.parent.get_global_transformation()
         self.global_transformation = np.dot(self.global_transformation,self.local_transformation)
+        if rest_bind == True:
+            self.bind_transformation = np.dot(self.global_transformation,self.local_transformation)
         return self.global_transformation
     
-    def get_global_point(self,point):
+    def get_global_point(self,point = [0,0,0,1]):
+        if point == [0,0,0,1]:
+            self.global_origin = np.dot(self.global_transformation,point)[0:3]
         return np.dot(self.global_transformation,point)[0:3]
         
 
