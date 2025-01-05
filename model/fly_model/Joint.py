@@ -42,7 +42,7 @@ class Joint:
         self.global_transformation = self.parent.get_global_transformation()
         self.global_transformation = np.dot(self.global_transformation,self.local_transformation)
         if rest_bind == True:
-            self.bind_transformation = np.dot(self.global_transformation,self.local_transformation)
+            self.bind_transformation = self.global_transformation
         return self.global_transformation
     
     def get_global_point(self,point = [0,0,0,1]):
