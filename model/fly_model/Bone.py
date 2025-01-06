@@ -12,8 +12,10 @@ class Bone:
         self.bone_points = np.vstack([parent_joint.global_origin,child_joint.global_origin])
 
 
+
+
+
     def calculate_dist_from_bone(self,points):
-        
         
         points_to_bone_origin = points - self.bone_points[0] # vector between the 3d points and the bone origin (not nomalized)
         bone_vector = self.bone_points[1] - self.bone_points[0] # The vector representing the bone (from origin to end, not normalized)

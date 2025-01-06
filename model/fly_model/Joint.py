@@ -51,6 +51,10 @@ class Joint:
         return np.dot(self.global_transformation,point)[0:3]
         
 
+    def rotate_to_new_position(self,weight,points_homo):
+        transformation_rest = np.linalg.inv(self.bind_transformation)
+        rotated_points = np.dot(transformation_rest,points_homo.T)
+        return weight*np.dot(self.global_transformation,rotated_points).T
 
 
 

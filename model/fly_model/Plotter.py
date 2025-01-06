@@ -4,16 +4,16 @@ import plotly
 
 import plotly.graph_objects as go
 import plotly.io as pio
-import plotly.express as px
-import matplotlib.cm
+# import plotly.express as px
+# import matplotlib.cm
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
+# import matplotlib.pyplot as plt
+# import pandas as pd
 from plotly.subplots import make_subplots
 
 pio.renderers.default='browser'
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -31,13 +31,10 @@ def plot_branch(branch,color,ax = False):
 
 
 
-def scatter3d(fig,data,legend,show_colorbar=False, mode = 'markers',line_dict = {},marker_dict = {}):
+def scatter3d(fig,data,legend, mode = 'markers',line_dict = {},marker_dict = {}):
 
     marker_dict = marker_dict if 'markers' in mode else {}
-    # Conditionally add the colorbar
-    if show_colorbar == True:
-        marker_dict["colorbar"] = dict(title="Colorbar")
-
+    
     # Include line dict if mode includes 'lines'
     line_params = line_dict if 'lines' in mode else {}
     
