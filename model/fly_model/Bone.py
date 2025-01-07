@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Bone:
+class Bone():
     def __init__(self,parent_joint,child_joint):
   
         self.parent = parent_joint
@@ -12,6 +12,10 @@ class Bone:
         self.bone_points = np.vstack([parent_joint.global_origin,child_joint.global_origin])
 
 
+    def update_bone(self):
+        
+        self.direction = (np.array(self.parent.global_origin) - np.array(self.child.global_origin))/self.length
+        self.bone_points = np.vstack([self.parent.global_origin,self.child.global_origin])
 
 
 

@@ -23,13 +23,15 @@ class Skeleton():
 
 
     def add_bone_to_joint(self):
+        self.bones = []
         for joint_name in self.joints.keys():
             joint = self.joints[joint_name]
             if ((joint.parent != None) and (joint.joint_without_bone == False)) and (joint.parent.joint_without_bone == False):
                 self.add_bone(self.joints[joint_name].parent, self.joints[joint_name])
                 self.bones.append(self.joints[joint_name].parent.name)
 
-    
+    def update_bone(self):
+        [self.joints[joint_name].bone.update_bone() for joint_name in self.joints.keys() if self.joints[joint_name].bone != None]
 
     def add_bone(self, parent_joint, child_joint):
         bone = Bone(parent_joint, child_joint)
@@ -66,19 +68,9 @@ class Skeleton():
 
     def plot_skeleton(self,fig,marker_dict,line_dict):
         
-        for joint_name in self.joints.keys():
-
-
-            if 'right' in joint_name: 
-                color = 'red'
-            elif 'left' in joint_name: 
-                color = 'blue'
-            else:
-                color = 'green'
-            
-            marker_dict['color'] = color
-            line_dict['color'] = color
-            bone = self.joints[joint_name].bone
-            if bone is not None:
-                Plotter.scatter3d(fig,bone.bone_points,bone.bone_points_names[0],mode = 'lines',line_dict= line_dict)
-                Plotter.scatter3d(fig,bone.bone_points,bone.bone_points_names[0],mode = 'markers',marker_dict= marker_dict)
+        for joint in self.joints.values():
+            marker_dict['color'] = joint.color
+            line_dict['color'] = joint.color
+            if joint.bone is not None:
+                Plotter.scatter3d(fig,joint.bone.bone_points,joint.bone.bone_points_names[0],mode = 'lines',line_dict= line_dict)
+                Plotter.scatter3d(fig,joint.bone.bone_points,joint.bone.bone_points_names[0],mode = 'markers',marker_dict= marker_dict)

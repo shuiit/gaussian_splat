@@ -3,18 +3,27 @@ import numpy as np
 
 
 class Joint:
-    def __init__(self,name, parent = None,translation_from_parent = [0,0,0],wing = 0, joint_without_bone = False):
+    def __init__(self,name, parent = None,translation_from_parent = [0,0,0], joint_without_bone = False):
         self.name = name
         self.parent = parent
         self.child = []
         self.local_rotation = np.eye(3)
         self.translation_from_parent = translation_from_parent
         self.local_transformation = self.transformation_matrix()
-        self.wing = wing
         self.global_transformation = np.eye(4)
         self.joint_without_bone = joint_without_bone
         self.bone = None
+        self.color = self.define_color_for_joint()
         
+
+    def define_color_for_joint(self, color = 'green'):
+        if 'right' in self.name:
+            color = 'red'  
+        elif 'left' in self.name:
+            color = 'blue' 
+        return color
+        
+    
 
     def add_child(self,child):
         self.child.append(child)
@@ -25,8 +34,6 @@ class Joint:
         # angles (z,y,x) (yaw, pitch, roll)
         self.local_rotation = self.rotation_matrix(angles[0],angles[1],angles[2])
         self.local_transformation = self.transformation_matrix()
-
-
 
     
     def set_local_translation(self,translation_from_parent):
@@ -55,6 +62,14 @@ class Joint:
         transformation_rest = np.linalg.inv(self.bind_transformation)
         rotated_points = np.dot(transformation_rest,points_homo.T)
         return weight*np.dot(self.global_transformation,rotated_points).T
+
+
+
+    def rotate_normal_to_new_position(self,weight,normal):
+        transformation_rest = np.linalg.inv(self.bind_transformation)
+        transformation_rest_to_global = np.dot(self.global_transformation,transformation_rest).T
+        rotated_points_inv = np.linalg.inv(transformation_rest_to_global)
+        return weight*np.dot(rotated_points_inv,normal.T).T
 
 
 

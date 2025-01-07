@@ -54,3 +54,36 @@ def scatter3d(fig,data,legend, mode = 'markers',line_dict = {},marker_dict = {})
         aspectmode='data'  # Ensures x, y, z axes have the same scale
     ))
     return fig
+
+def plot_cones(fig, points, normals,skip = 10,sizeref = 1000,opacity = 0.5):
+    skip = 10
+    fig.add_trace(go.Cone(
+    x=points[::skip,0],
+    y=points[::skip,1],
+    z=points[::skip,2],
+    u=normals[::skip,0],
+    v=normals[::skip,1],
+    w=normals[::skip,2],
+    opacity= opacity,
+    sizemode="absolute",
+    showscale = False,
+    sizeref=sizeref))
+    fig.update_layout(scene=dict(aspectratio=dict(x=1, y=1, z=0.8),aspectmode = 'data',
+                             camera_eye=dict(x=1.2, y=1.2, z=0.6)))
+
+
+
+def plot_skeleton_and_skin(skin_points,skin,skeleton,skip_skin_points = 10, idx_weight = 3, normals = False, **kwargs):
+    marker_dict_skin = {'size':4,'color':skin.weight[::skip_skin_points,idx_weight],  # Set color to distances
+                    'colorscale':'Viridis','opacity':0.3}
+    marker_dict_skeleton = {'size': 10}
+    line_dict_skeleton = {'width': 10}
+
+    fig = go.Figure()
+    if isinstance(normals, np.ndarray):
+        plot_cones(fig, skin_points,normals, skip = skip_skin_points,**kwargs)
+    else:
+        scatter3d(fig,skin_points[::skip_skin_points,:],'skin',marker_dict = marker_dict_skin)
+    
+    skeleton.plot_skeleton(fig,marker_dict_skeleton,line_dict_skeleton)
+    fig.show()
