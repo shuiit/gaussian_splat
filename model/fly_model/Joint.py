@@ -1,30 +1,25 @@
 import numpy as np
-
+from Bone import Bone
 
 
 class Joint:
-    def __init__(self,name, parent = None,translation_from_parent = [0,0,0], joint_without_bone = False):
-        self.name = name
+    def __init__(self, translation, rotation,  parent = None, joint_without_bone = False, joint_rotation = 'zyx', scale = 1,color = 'green'):
         self.parent = parent
         self.child = []
-        self.local_rotation = np.eye(3)
-        self.translation_from_parent = translation_from_parent
+        self.local_rotation = self.rotation_matrix(rotation[0],rotation[1],rotation[2])
+        self.translation_from_parent = np.array(translation)*scale
         self.local_transformation = self.transformation_matrix()
-        self.global_transformation = np.eye(4)
+        self.global_transformation = self.get_global_transformation(rest_bind = True)
         self.joint_without_bone = joint_without_bone
-        self.bone = None
-        self.color = self.define_color_for_joint()
+        self.get_global_point()
+        self.bone = None if joint_without_bone == True else Bone(self.parent, self)
+        self.color = color
+        self.joint_rotation = rotation
+        self.scale = scale
         
-
-    def define_color_for_joint(self, color = 'green'):
-        if 'right' in self.name:
-            color = 'red'  
-        elif 'left' in self.name:
-            color = 'blue' 
-        return color
         
     
-
+   
     def add_child(self,child):
         self.child.append(child)
         child.parent = self
@@ -36,8 +31,8 @@ class Joint:
         self.local_transformation = self.transformation_matrix()
 
     
-    def set_local_translation(self,translation_from_parent):
-        self.translation_from_parent = translation_from_parent
+    def set_local_translation(self,translation):
+        self.translation_from_parent = np.array(translation)
         self.local_transformation = self.transformation_matrix()
 
     def set_local_transformation(self):
@@ -46,7 +41,7 @@ class Joint:
     def get_global_transformation(self, rest_bind = False):
         if self.parent == None:
             return self.local_transformation
-        self.global_transformation = self.parent.get_global_transformation()
+        self.global_transformation = self.parent.get_global_transformation(rest_bind = rest_bind)
         self.global_transformation = np.dot(self.global_transformation,self.local_transformation)
         if rest_bind == True:
             self.bind_transformation = self.global_transformation

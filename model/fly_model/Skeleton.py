@@ -3,39 +3,40 @@ from Joint import Joint
 import numpy as np
 from Bone import Bone
 class Skeleton():
-    def __init__(self,parent_child,joints,bone_rotation,skin):
+    def __init__(self,joints,bone_rotation,skin, scale = 1):
         self.bones = []
         self.joints = {}
+        self.scale = scale
         self.initilize_skeleton(parent_child,joints,bone_rotation,skin)
          
 
-    def initilize_joints(self,joints):
-        [self.add_joint(joint_name,transltation) for joint_name, transltation in joints.items()]
+    # def initilize_joints(self,joints):
+    #     [self.add_joint(joint_name,transltation) for joint_name, transltation in joints.items()]
         
 
 
     def add_joint(self,joint_name,transltation):
-        self.joints[joint_name] = Joint(joint_name,translation_from_parent = transltation ,joint_without_bone = (len(joint_name.split('no_bone')) >1))
+        self.joints[joint_name] = Joint(joint_name,translation_from_parent = transltation*self.scale ,joint_without_bone = (len(joint_name.split('no_bone')) >1), scale = self.scale)
 
-    def connect_parent_child(self,parent_child):
-        for joint_name,children_names in parent_child.items():
-            [self.joints[joint_name].add_child(self.joints[child_name]) for child_name in children_names]
+    # def connect_parent_child(self,parent_child):
+    #     for joint_name,children_names in parent_child.items():
+    #         [self.joints[joint_name].add_child(self.joints[child_name]) for child_name in children_names]
 
 
-    def add_bone_to_joint(self):
-        self.bones = []
-        for joint_name in self.joints.keys():
-            joint = self.joints[joint_name]
-            if ((joint.parent != None) and (joint.joint_without_bone == False)) and (joint.parent.joint_without_bone == False):
-                self.add_bone(self.joints[joint_name].parent, self.joints[joint_name])
-                self.bones.append(self.joints[joint_name].parent.name)
+    # def add_bone_to_joint(self):
+    #     self.bones = []
+    #     for joint_name in self.joints.keys():
+    #         joint = self.joints[joint_name]
+    #         if ((joint.parent != None) and (joint.joint_without_bone == False)) and (joint.parent.joint_without_bone == False):
+    #             self.add_bone(self.joints[joint_name].parent, self.joints[joint_name])
+    #             self.bones.append(self.joints[joint_name].parent.name)
 
     def update_bone(self):
         [self.joints[joint_name].bone.update_bone() for joint_name in self.joints.keys() if self.joints[joint_name].bone != None]
 
-    def add_bone(self, parent_joint, child_joint):
-        bone = Bone(parent_joint, child_joint)
-        parent_joint.bone = bone
+    # def add_bone(self, parent_joint, child_joint):
+    #     bone = Bone(parent_joint, child_joint)
+    #     parent_joint.bone = bone
 
     def update_skeleton(self,local_rotation,local_translation):
         
@@ -51,12 +52,12 @@ class Skeleton():
 
     def initilize_skeleton(self,parent_child,joints,bone_rotation,skin):
         
-        self.initilize_joints(joints)
-        self.connect_parent_child(parent_child)
-        self.update_local_roattion(bone_rotation)
-        self.update_global_rotation(rest_bind = True)
-        self.get_global_point_skeleton_branch()
-        self.add_bone_to_joint()
+        # self.initilize_joints(joints)
+        # self.connect_parent_child(parent_child)
+        # self.update_local_roattion(bone_rotation)
+        # self.update_global_rotation(rest_bind = True)
+        # self.get_global_point_skeleton_branch()
+        # self.add_bone_to_joint()
         skin.calculate_weights(self,constant_weight = [None,'right_wing_root','left_wing_root'],th = 10)
 
       

@@ -6,7 +6,7 @@ class Bone():
   
         self.parent = parent_joint
         self.child = child_joint
-        self.bone_points_names = [parent_joint.name,child_joint.name]
+        # self.bone_points_names = [parent_joint.name,child_joint.name]
         self.length = np.linalg.norm((np.array(parent_joint.global_origin) - np.array(child_joint.global_origin)))
         self.direction = (np.array(parent_joint.global_origin) - np.array(child_joint.global_origin))/self.length
         self.bone_points = np.vstack([parent_joint.global_origin,child_joint.global_origin])
