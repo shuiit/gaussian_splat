@@ -2,11 +2,11 @@
 from Joint import Joint
 import numpy as np
 from Bone import Bone
-import Plotter
 class Skeleton():
-    def __init__(self):
+    def __init__(self,parent_child,joints,bone_rotation,skin):
         self.bones = []
         self.joints = {}
+        self.initilize_skeleton(parent_child,joints,bone_rotation,skin)
          
 
     def initilize_joints(self,joints):
@@ -37,15 +37,36 @@ class Skeleton():
         bone = Bone(parent_joint, child_joint)
         parent_joint.bone = bone
 
+    def update_skeleton(self,local_rotation,local_translation):
+        
+        self.update_local_roattion(local_rotation)
+        self.update_local_translation(local_translation)
+        self.update_global_rotation()
+        self.get_global_point_skeleton_branch()
+        self.update_bone()
 
+    # def build_skeletone(self,parent_child):
+    #     for joint_name,children_names in parent_child.items():
+    #         [self.joints[joint_name].add_child(self.joints[child_name]) for child_name in children_names]
 
-    def build_skeletone(self,joints,parent_child):
-        for joint_name,children_names in parent_child.items():
-            [self.joints[joint_name].add_child(self.joints[child_name]) for child_name in children_names]
+    def initilize_skeleton(self,parent_child,joints,bone_rotation,skin):
+        
+        self.initilize_joints(joints)
+        self.connect_parent_child(parent_child)
+        self.update_local_roattion(bone_rotation)
+        self.update_global_rotation(rest_bind = True)
+        self.get_global_point_skeleton_branch()
+        self.add_bone_to_joint()
+        skin.calculate_weights(self,constant_weight = [None,'right_wing_root','left_wing_root'],th = 10)
 
       
     def update_local_roattion(self,local_rotation):
         [self.joints[joint_name].set_local_rotation(rotation) for joint_name,rotation in local_rotation.items()]
+
+    
+    def update_local_translation(self,local_translation):
+        [self.joints[joint_name].set_local_translation(translation) for joint_name,translation in local_translation.items()]
+
 
     def update_global_rotation(self, **kwargs):
         [self.joints[joint_name].get_global_transformation(**kwargs) for joint_name in self.joints.keys()]
@@ -65,12 +86,3 @@ class Skeleton():
             weight_map[weight_map > th] = 1
         return weight_map
     
-
-    def plot_skeleton(self,fig,marker_dict,line_dict):
-        
-        for joint in self.joints.values():
-            marker_dict['color'] = joint.color
-            line_dict['color'] = joint.color
-            if joint.bone is not None:
-                Plotter.scatter3d(fig,joint.bone.bone_points,joint.bone.bone_points_names[0],mode = 'lines',line_dict= line_dict)
-                Plotter.scatter3d(fig,joint.bone.bone_points,joint.bone.bone_points_names[0],mode = 'markers',marker_dict= marker_dict)

@@ -1,19 +1,12 @@
-import plotly
-
-
 
 import plotly.graph_objects as go
 import plotly.io as pio
-# import plotly.express as px
-# import matplotlib.cm
 import numpy as np
-# import matplotlib.pyplot as plt
-# import pandas as pd
 from plotly.subplots import make_subplots
 
 pio.renderers.default='browser'
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -72,18 +65,49 @@ def plot_cones(fig, points, normals,skip = 10,sizeref = 1000,opacity = 0.5):
                              camera_eye=dict(x=1.2, y=1.2, z=0.6)))
 
 
+def plot_skeleton(skeleton,fig,marker_dict,line_dict):
+    
+    for joint in skeleton.joints.values():
+        marker_dict['color'] = joint.color
+        line_dict['color'] = joint.color
+        if joint.bone is not None:
+            scatter3d(fig,joint.bone.bone_points,joint.bone.bone_points_names[0],mode = 'lines',line_dict= line_dict)
+            scatter3d(fig,joint.bone.bone_points,joint.bone.bone_points_names[0],mode = 'markers',marker_dict= marker_dict)
 
-def plot_skeleton_and_skin(skin_points,skin,skeleton,skip_skin_points = 10, idx_weight = 3, normals = False, **kwargs):
+
+def plot_skeleton_and_skin_weight(skin_points,skin,skeleton,skip_skin_points = 10, idx_weight = 3,marker_dict_skeleton = {'size': 10},line_dict_skeleton ={'width': 10}, **kwargs):
     marker_dict_skin = {'size':4,'color':skin.weight[::skip_skin_points,idx_weight],  # Set color to distances
-                    'colorscale':'Viridis','opacity':0.3}
+                    'colorscale':'Viridis',**kwargs}
     marker_dict_skeleton = {'size': 10}
     line_dict_skeleton = {'width': 10}
 
     fig = go.Figure()
-    if isinstance(normals, np.ndarray):
-        plot_cones(fig, skin_points,normals, skip = skip_skin_points,**kwargs)
-    else:
-        scatter3d(fig,skin_points[::skip_skin_points,:],'skin',marker_dict = marker_dict_skin)
+    scatter3d(fig,skin_points[::skip_skin_points,:],'skin',marker_dict = marker_dict_skin) 
+    plot_skeleton(skeleton,fig,marker_dict_skeleton,line_dict_skeleton)
+    return fig
+
+
     
-    skeleton.plot_skeleton(fig,marker_dict_skeleton,line_dict_skeleton)
-    fig.show()
+def plot_skeleton_and_skin_normals(skin_points,skeleton,skip_skin_points = 10, normals = False,marker_dict_skeleton = {'size': 10},line_dict_skeleton ={'width': 10}, **kwargs):
+
+    marker_dict_skeleton = {'size': 10}
+    line_dict_skeleton = {'width': 10}
+    fig = go.Figure()
+    plot_cones(fig, skin_points,normals, skip = skip_skin_points,**kwargs)
+    plot_skeleton(skeleton,fig,marker_dict_skeleton,line_dict_skeleton)
+    return fig
+
+
+    
+def plot_skeleton_and_skin_hull(skin_points,skin,skeleton,skip_skin_points = 10,marker_dict_skeleton = {'size': 10},line_dict_skeleton ={'width': 10} , **kwargs):
+    fig = go.Figure()
+    colors = ['lime','crimson','dodgerblue']
+    
+    points_parts = [skin.get_part(part,skin_points)[::skip_skin_points,:] for part in  skin.parts.keys()]
+  
+    for part,color,name in zip(points_parts,colors,skin.parts.keys()):
+        marker_dict_skin = {'size':4,'color':color,  # Set color to distances
+                'colorscale':'Viridis',**kwargs}
+        scatter3d(fig,part,name,marker_dict = marker_dict_skin)
+    plot_skeleton(skeleton,fig,marker_dict_skeleton,line_dict_skeleton)
+    return fig

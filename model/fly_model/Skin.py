@@ -2,7 +2,6 @@
 import os.path
 import open3d as o3d
 import numpy as np
-import Plotter 
 
 
 class Skin():
@@ -32,7 +31,7 @@ class Skin():
 
 
     def calculate_weights(self,skeleton,constant_weight = [False,'right_wing_root','left_wing_root'],**kwargs):
-        self.weight = np.vstack([skeleton.calculate_weight(self.get_part(part), constant_weight = constant_weight,**kwargs) for constant_weight,part in zip(constant_weight,self.parts.keys())])
+        self.weight = np.vstack([skeleton.calculate_weight(self.get_part(part,self.ptcloud_skin), constant_weight = constant_weight,**kwargs) for constant_weight,part in zip(constant_weight,self.parts.keys())])
 
 
     def rotate_skin(self,skeleton):
@@ -51,8 +50,8 @@ class Skin():
         return np.sum(rotated_points,axis = 0)[:,0:3],(normals_rotated.T/np.linalg.norm(normals_rotated, axis = 1)).T
 
 
-    def get_part(self,part):
-        return self.ptcloud_skin[self.ptcloud_part_idx == self.parts[part],:]
+    def get_part(self,part,points):
+        return points[self.ptcloud_part_idx == self.parts[part],:]
     
     # def translate_skin_by_bone(self, parent_joint,points_homo,skip = 10):
 

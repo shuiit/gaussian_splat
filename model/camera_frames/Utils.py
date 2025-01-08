@@ -1,6 +1,6 @@
 
 import numpy as np
-
+import scipy
 def triangulate_least_square(origins,end_of_vectors):
     # triangulate all lines to find the closest 3d point with least square
     # we define a 3d vector ab and a point p
@@ -25,3 +25,16 @@ def triangulate_least_square(origins,end_of_vectors):
     s = np.sum(inner,axis = 0)
     c = np.sum([np.dot(mat,vec) for mat,vec in zip(inner,origins)],axis = 0)
     return  np.linalg.solve(s,c)
+
+def load_hull(body_wing,path):
+    """
+    Load the 3D hull points for a specified body part from a .mat file.
+
+    Args:
+        body_wing (str): The name of the body part ('body', 'rwing', or 'lwing').
+        path (str): The directory path where the .mat file is located.
+
+    Returns:
+        numpy.ndarray: An array containing the 3D hull points for the specified body part.
+    """
+    return scipy.io.loadmat(f'{path}/3d_pts/{body_wing}.mat')['hull']

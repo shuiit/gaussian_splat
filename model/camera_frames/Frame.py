@@ -51,7 +51,7 @@ class Frame(Camera):
         image,bg = self.load_image()
         image,image_no_bg = self.erode_and_add_bf(image,bg)
 
-        pixels = np.vstack(np.where(np.array(image) > 0)).T
+        pixels = np.vstack(np.where(np.array(image_no_bg) > 0)).T
         cm = np.mean(pixels,0).astype(int)
         self.bounding_box = [max(0,cm[1] - delta_xy), max(0,cm[0]-delta_xy), max(0,cm[1] - delta_xy) + delta_xy*2 , max(0,cm[0]-delta_xy) + delta_xy*2] # [top left, bottom right]
         self.top_left = [cm[0]-delta_xy,cm[1]-delta_xy]
