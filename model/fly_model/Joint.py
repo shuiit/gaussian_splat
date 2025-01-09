@@ -3,26 +3,67 @@ from Bone import Bone
 
 
 class Joint:
-    def __init__(self, translation, rotation,  parent = None, joint_without_bone = False, joint_rotation = 'zyx', scale = 1,color = 'green'):
-        self.parent = parent
+    def __init__(self, translation, rotation,  parent = None, end_joint_of_bone = True, joint_rotation = 'zyx', scale = 1,color = 'green'):
         self.child = []
+        self.parent = parent
         self.local_rotation = self.rotation_matrix(rotation[0],rotation[1],rotation[2])
         self.translation_from_parent = np.array(translation)*scale
         self.local_transformation = self.transformation_matrix()
         self.global_transformation = self.get_global_transformation(rest_bind = True)
-        self.joint_without_bone = joint_without_bone
+        self.end_joint_of_bone = end_joint_of_bone
         self.get_global_point()
-        self.bone = None if joint_without_bone == True else Bone(self.parent, self)
+        self.bone = None
         self.color = color
         self.joint_rotation = rotation
         self.scale = scale
+        self.update_child()
+        # self.parent.child.append(self) if self.parent != None else []
         
+
+
+    def update_child(self):
+        if self.parent == None:
+            return
+        self.parent.update_child()
         
+        if self not in self.parent.child:
+            self.parent.child.append(self)
+       
+
     
-   
-    def add_child(self,child):
-        self.child.append(child)
-        child.parent = self
+    def assign_bones(self, visited=None):
+        if visited is None:
+            visited = set()  
+
+        if self not in visited:
+            visited.add(self)
+        
+        for child in self.child:
+            if child.end_joint_of_bone:
+                child.parent.bone = Bone(child, child.parent)
+            child.assign_bones(visited) 
+
+
+    def calculate_weight(self,skin,constant_weight = False,visited = None):
+
+        if visited is None:
+            visited = set()  
+            
+        if self in visited:
+            return [] # on the way up, if reached an already visited parent, return an empty list
+        
+        visited.add(self)
+        
+        weight = [np.ones(skin.shape[0])] if self.bone == constant_weight else [np.zeros(skin.shape[0])]
+        # for each node on the way down add its wight to the list. 
+        if constant_weight == False:
+            weight = [self.bone.calculate_dist_from_bone(skin)] if self.bone else []
+
+        for child in self.child:
+            weight += (child.calculate_weight(skin,constant_weight,visited))
+        return weight # while going up, return weight - thus adding all children eventually reaching a child we havvent visited yet, then call the function again to get the other branch
+                      # if al childrens are visited we will add them until we got to the root. 
+
 
 
     def set_local_rotation(self,angles):

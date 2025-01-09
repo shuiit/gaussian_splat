@@ -5,9 +5,10 @@ import numpy as np
 
 
 class Skin():
-    def __init__(self,path_to_mesh, scale = 1):
+    def __init__(self,path_to_mesh, scale = 1, constant_weight = False):
         self.scale = scale
         self.load_skin(path_to_mesh)
+        self.constant_weight = constant_weight
         
     def load_skin(self,path_to_mesh):
         if os.path.isfile(f'{path_to_mesh}'):
