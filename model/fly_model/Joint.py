@@ -3,9 +3,10 @@ from Bone import Bone
 
 
 class Joint:
-    def __init__(self, translation, rotation,  parent = None, end_joint_of_bone = True, joint_rotation = 'zyx', scale = 1,color = 'green'):
+    def __init__(self, translation, rotation,  parent = None, end_joint_of_bone = True, rotation_order = 'zyx', scale = 1,color = 'green'):
         self.child = []
         self.parent = parent
+        self.rotation_order = list(rotation_order)
         self.local_rotation = self.rotation_matrix(rotation[0],rotation[1],rotation[2])
         self.translation_from_parent = np.array(translation)*scale
         self.local_transformation = self.transformation_matrix()
@@ -14,7 +15,6 @@ class Joint:
         self.get_global_point()
         self.bone = None
         self.color = color
-        self.joint_rotation = rotation
         self.scale = scale
         self.update_child()
         # self.parent.child.append(self) if self.parent != None else []
@@ -31,40 +31,43 @@ class Joint:
        
 
     def get_and_assign_bones(self, visited = None):
-        if visited is None:
-            visited = set()
-
+        visited = visited or set()
+            
         if self in visited:
             return []
+        visited.add(self)
         if self.end_joint_of_bone:
-            self.parent.bone = Bone(self, self.parent)
+            self.parent.bone = Bone(self.parent,self )
         bones = [self.parent] if self.end_joint_of_bone else []
         for child in self.child: 
             bones += child.get_and_assign_bones(visited)
         return bones
-
+    
+    # def get_and_assign_bones(self, visited = None, bones = None):
+    #     visited = visited or set()
+    #     print(bones)
+    #     bones = bones or []
+    #     visited.add(self)
+    #     if self.end_joint_of_bone:
+    #         self.parent.bone = Bone(self.parent,self )
+    #         bones.append(self.parent)
+    #     for child in self.child: 
+    #         child.get_and_assign_bones(visited,bones)
+    #     return bones
     
 
-    def calculate_weight(self,skin,constant_weight = False,visited = None):
 
-        if visited is None:
-            visited = set()  
-            
-        if self in visited:
-            return [] # on the way up, if reached an already visited parent, return an empty list
-        
+    def get_list_of_joints(self, visited = None,joints = None):
+        visited = visited or set()
+        joints = joints or []
+        joints.append(self)
         visited.add(self)
-        
-        # for each node on the way down add its wight to the list. 
-        if constant_weight == False:
-            weight = [self.bone.calculate_dist_from_bone(skin)] if self.bone else []
-        else:
-            weight = [np.ones(skin.shape[0])] if self.bone == constant_weight else [np.zeros(skin.shape[0])]
 
-        for child in self.child:
-            weight += (child.calculate_weight(skin,constant_weight,visited))
-        return weight # while going up, return weight - thus adding all children eventually reaching a child we havvent visited yet, then call the function again to get the other branch
-                      # if al childrens are visited we will add them until we got to the root. 
+        for child in self.child: 
+            if child not in visited:
+                child.get_list_of_joints(visited,joints)
+        return joints
+
 
 
 
@@ -101,6 +104,9 @@ class Joint:
         rotated_points = np.dot(transformation_rest,points_homo.T)
         return weight*np.dot(self.global_transformation,rotated_points).T
 
+    def update_rotation(self):
+        self.get_global_transformation()
+        self.get_global_point()
 
 
     def rotate_normal_to_new_position(self,weight,normal):
@@ -113,15 +119,17 @@ class Joint:
 
 
 
-    @staticmethod
-    def rotation_matrix(yaw,pitch,roll):
+    def rotation_matrix(self,yaw,pitch,roll):
         roll = roll*np.pi/180
         pitch = pitch*np.pi/180
         yaw = yaw*np.pi/180
-        roll_mat = np.array([[1,0,0],[0 ,np.cos(roll),-np.sin(roll)],[0, np.sin(roll), np.cos(roll)]])
-        pitch_mat = np.array([[np.cos(pitch),0,np.sin(pitch)],[0, 1,0],[-np.sin(pitch), 0, np.cos(pitch)]])
-        yaw_mat = np.array([[np.cos(yaw),-np.sin(yaw),0],[np.sin(yaw),np.cos(yaw),0],[0, 0, 1]])
-        return yaw_mat @ pitch_mat @ roll_mat
-
+        mat = {}
+        mat['x'] = np.array([[1,0,0],[0 ,np.cos(roll),-np.sin(roll)],[0, np.sin(roll), np.cos(roll)]])
+        mat['y'] = np.array([[np.cos(pitch),0,np.sin(pitch)],[0, 1,0],[-np.sin(pitch), 0, np.cos(pitch)]])
+        mat['z'] = np.array([[np.cos(yaw),-np.sin(yaw),0],[np.sin(yaw),np.cos(yaw),0],[0, 0, 1]])
+ 
+        rotation_matrix = mat[self.rotation_order[0]] @ mat[self.rotation_order[1]]  @ mat[self.rotation_order[2]] 
+        return rotation_matrix
+    
     def transformation_matrix(self):
         return  np.vstack((np.column_stack((self.local_rotation,self.translation_from_parent)),[0,0,0,1]))

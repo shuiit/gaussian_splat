@@ -10,16 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_branch(branch,color,ax = False):
-    if ax == False:
-        fig = plt.figure()
-        ax = fig.add_subplot(projection='3d')
-    
-    points = np.vstack(branch)
-    ax.scatter3D(points[:,0], points[:,1], points[:,2], 
-                marker='o', s=20, c=color)  # Adjust marker size and color as desired
-    ax.plot3D(points[:,0],points[:,1],points[:,2],c = color)
-    return ax
 
 
 
@@ -73,17 +63,6 @@ def plot_skeleton(bones,fig,marker_dict,line_dict, name = ['neck_head','neck_tho
         scatter3d(fig,joint.bone.bone_points,name[idx],mode = 'lines+markers',line_dict= line_dict)
 
 
-def plot_skeleton_and_skin_weight(skin_points,skin,skeleton,skip_skin_points = 10, idx_weight = 3,marker_dict_skeleton = {'size': 10},line_dict_skeleton ={'width': 10}, **kwargs):
-    marker_dict_skin = {'size':4,'color':skin.weight[::skip_skin_points,idx_weight],  # Set color to distances
-                    'colorscale':'Viridis',**kwargs}
-    marker_dict_skeleton = {'size': 10}
-    line_dict_skeleton = {'width': 10}
-
-    fig = go.Figure()
-    scatter3d(fig,skin_points[::skip_skin_points,:],'skin',marker_dict = marker_dict_skin) 
-    plot_skeleton(skeleton,fig,marker_dict_skeleton,line_dict_skeleton)
-    return fig
-
 
     
 def plot_skeleton_and_skin_normals(skin_points,skeleton,skip_skin_points = 10, normals = False,marker_dict_skeleton = {'size': 10},line_dict_skeleton ={'width': 10}, **kwargs):
@@ -95,11 +74,16 @@ def plot_skeleton_and_skin_normals(skin_points,skeleton,skip_skin_points = 10, n
     plot_skeleton(skeleton,fig,marker_dict_skeleton,line_dict_skeleton)
     return fig
 
+def plot_skin_normals(fig,skin_points,normals,skin,skip_skin_points = 10,color = None, **kwargs):
+    plot_cones(fig, skin_points,normals, skip = skip_skin_points,**kwargs)
+    return fig
 
     
-def plot_skin(fig,skin,name,skip_skin_points = 10,marker_dict_skeleton = {'size': 10},line_dict_skeleton ={'width': 10} , **kwargs):
-
-    marker_dict_skin = {'size':4,'color':skin.color,  # Set color to distances
+def plot_skin(fig,points_to_plot,skin,name,skip_skin_points = 10,color = None, **kwargs):
+    color = skin.color if color is None or color.size == 0 else color
+    marker_dict_skin = {'size':4,'color': color,  # Set color to distances
             'colorscale':'Viridis',**kwargs}
-    scatter3d(fig,skin.ptcloud_skin[::skip_skin_points,:],name,marker_dict = marker_dict_skin)
+    scatter3d(fig,points_to_plot[::skip_skin_points,:],name,marker_dict = marker_dict_skin)
+    fig.update_layout(scene=dict(aspectratio=dict(x=1, y=1, z=0.8),aspectmode = 'data',
+                             camera_eye=dict(x=1.2, y=1.2, z=0.6)))
     return fig

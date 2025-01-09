@@ -7,10 +7,23 @@ class Bone():
         self.parent = parent_joint
         self.child = child_joint
         # self.bone_points_names = [parent_joint.name,child_joint.name]
-        self.length = np.linalg.norm((np.array(parent_joint.global_origin) - np.array(child_joint.global_origin)))
-        self.direction = (np.array(parent_joint.global_origin) - np.array(child_joint.global_origin))/self.length
-        self.bone_points = np.vstack([parent_joint.global_origin,child_joint.global_origin])
+        # self.length = np.linalg.norm((np.array(self.parent.global_origin) - np.array(self.child.global_origin)))
+        # self.direction = (np.array(self.parent.global_origin) - np.array(self.child.global_origin))/self.length
 
+    @property
+    def bone_points(self):
+        return np.vstack([self.parent.global_origin, self.child.global_origin])
+
+    @property
+    def length(self):
+        return np.linalg.norm(np.array(self.parent.global_origin) - np.array(self.child.global_origin))
+
+    @property
+    def direction(self):
+        displacement = np.array(self.parent.global_origin) - np.array(self.child.global_origin)
+        return displacement / np.linalg.norm(displacement) if np.linalg.norm(displacement) != 0 else np.zeros_like(displacement)
+
+    
 
     def update_bone(self):
         
