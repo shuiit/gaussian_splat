@@ -65,14 +65,12 @@ def plot_cones(fig, points, normals,skip = 10,sizeref = 1000,opacity = 0.5):
                              camera_eye=dict(x=1.2, y=1.2, z=0.6)))
 
 
-def plot_skeleton(skeleton,fig,marker_dict,line_dict):
+def plot_skeleton(bones,fig,marker_dict,line_dict, name = ['neck_head','neck_thorax','thorax_abdomen','right_wing','left_wing']):
     
-    for joint in skeleton.joints.values():
+    for idx,joint in enumerate(bones):
         marker_dict['color'] = joint.color
         line_dict['color'] = joint.color
-        if joint.bone is not None:
-            scatter3d(fig,joint.bone.bone_points,joint.bone.bone_points_names[0],mode = 'lines',line_dict= line_dict)
-            scatter3d(fig,joint.bone.bone_points,joint.bone.bone_points_names[0],mode = 'markers',marker_dict= marker_dict)
+        scatter3d(fig,joint.bone.bone_points,name[idx],mode = 'lines+markers',line_dict= line_dict)
 
 
 def plot_skeleton_and_skin_weight(skin_points,skin,skeleton,skip_skin_points = 10, idx_weight = 3,marker_dict_skeleton = {'size': 10},line_dict_skeleton ={'width': 10}, **kwargs):
@@ -99,15 +97,9 @@ def plot_skeleton_and_skin_normals(skin_points,skeleton,skip_skin_points = 10, n
 
 
     
-def plot_skeleton_and_skin_hull(skin_points,skin,skeleton,skip_skin_points = 10,marker_dict_skeleton = {'size': 10},line_dict_skeleton ={'width': 10} , **kwargs):
-    fig = go.Figure()
-    colors = ['lime','crimson','dodgerblue']
-    
-    points_parts = [skin.get_part(part,skin_points)[::skip_skin_points,:] for part in  skin.parts.keys()]
-  
-    for part,color,name in zip(points_parts,colors,skin.parts.keys()):
-        marker_dict_skin = {'size':4,'color':color,  # Set color to distances
-                'colorscale':'Viridis',**kwargs}
-        scatter3d(fig,part,name,marker_dict = marker_dict_skin)
-    plot_skeleton(skeleton,fig,marker_dict_skeleton,line_dict_skeleton)
+def plot_skin(fig,skin,name,skip_skin_points = 10,marker_dict_skeleton = {'size': 10},line_dict_skeleton ={'width': 10} , **kwargs):
+
+    marker_dict_skin = {'size':4,'color':skin.color,  # Set color to distances
+            'colorscale':'Viridis',**kwargs}
+    scatter3d(fig,skin.ptcloud_skin[::skip_skin_points,:],name,marker_dict = marker_dict_skin)
     return fig

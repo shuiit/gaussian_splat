@@ -30,19 +30,20 @@ class Joint:
             self.parent.child.append(self)
        
 
-    
-    def assign_bones(self, visited=None):
+    def get_and_assign_bones(self, visited = None):
         if visited is None:
-            visited = set()  
+            visited = set()
 
-        if self not in visited:
-            visited.add(self)
-        
-        for child in self.child:
-            if child.end_joint_of_bone:
-                child.parent.bone = Bone(child, child.parent)
-            child.assign_bones(visited) 
+        if self in visited:
+            return []
+        if self.end_joint_of_bone:
+            self.parent.bone = Bone(self, self.parent)
+        bones = [self.parent] if self.end_joint_of_bone else []
+        for child in self.child: 
+            bones += child.get_and_assign_bones(visited)
+        return bones
 
+    
 
     def calculate_weight(self,skin,constant_weight = False,visited = None):
 
@@ -54,10 +55,11 @@ class Joint:
         
         visited.add(self)
         
-        weight = [np.ones(skin.shape[0])] if self.bone == constant_weight else [np.zeros(skin.shape[0])]
         # for each node on the way down add its wight to the list. 
         if constant_weight == False:
             weight = [self.bone.calculate_dist_from_bone(skin)] if self.bone else []
+        else:
+            weight = [np.ones(skin.shape[0])] if self.bone == constant_weight else [np.zeros(skin.shape[0])]
 
         for child in self.child:
             weight += (child.calculate_weight(skin,constant_weight,visited))
