@@ -56,10 +56,10 @@ class Frame(Camera):
         self.bounding_box = [max(0,cm[1] - delta_xy), max(0,cm[0]-delta_xy), max(0,cm[1] - delta_xy) + delta_xy*2 , max(0,cm[0]-delta_xy) + delta_xy*2] # [top left, bottom right]
         self.top_left = [cm[0]-delta_xy,cm[1]-delta_xy]
         self.crop_size = delta_xy*2
-
-        self.camera_calibration_crop(self.top_left) 
-
         self.image = image.crop(self.bounding_box)
+
+        self.camera_calibration_crop(self.top_left, self.image.size) 
+
         self.bg  = bg[self.bounding_box[0]:self.bounding_box[2],self.bounding_box[1]:self.bounding_box[2]]
         self.image_no_bg = image_no_bg.crop(self.bounding_box)
         self.image_size = self.image.size
@@ -67,32 +67,31 @@ class Frame(Camera):
         self.cm = np.mean(self.pixels,0)
 
 
-    def map_3d_2d(self, croped_image = False,use_zbuff = True):
+    def map_3d_2d(self,points_3d, croped_image = False,use_zbuff = True):
         """
         Map 3D voxel positions to 2D pixel coordinates and store relevant data.
 
         Args:
             croped_image (bool, optional): Whether to use cropped image pixels. Default is False.
         """
-        voxels,pixels_of_voxels = self.z_buffer(croped_camera_matrix = croped_image) if use_zbuff == True else self.map_no_zbuff(croped_camera_matrix = croped_image)
-        pixels_from_image = self.croped_pixels if croped_image else self.pixels
+        # voxels,pixels_of_voxels = self.z_buffer(croped_camera_matrix = croped_image) if use_zbuff == True else self.map_no_zbuff(croped_camera_matrix = croped_image)
+        pixels_of_voxels = self.project_on_image(points_3d)
 
-        original_projected_pixels = np.vstack((pixels_of_voxels,np.fliplr(pixels_from_image))) # project pixels
+        original_projected_pixels = np.vstack((pixels_of_voxels,np.fliplr(self.pixels ))) # project pixels
         [non_intersect_pixels,cnt] = np.unique(original_projected_pixels,axis = 0,return_counts=True) # identify non intersecting pixels
         non_intersect_pixels = non_intersect_pixels[cnt == 1,:] 
 
         all_pixels = np.vstack((pixels_of_voxels, non_intersect_pixels)) if use_zbuff == True else pixels_of_voxels
         all_3d_idx = np.full(all_pixels.shape[0], -1)
-        all_3d_idx[0:voxels.shape[0]] = voxels[:,3]
+        all_3d_idx[0:points_3d.shape[0]] = points_3d[:,3]
 
         self.pixel_with_idx = np.column_stack((all_pixels, all_3d_idx))
-        self.voxels_with_idx = np.column_stack((voxels,np.full(pixels_of_voxels.shape[0],self.image_id),np.arange(pixels_of_voxels.shape[0])))
+        self.voxels_with_idx = np.column_stack((points_3d,np.full(pixels_of_voxels.shape[0],self.image_id),np.arange(pixels_of_voxels.shape[0])))
 
         # determine the color of every pixel that has a mapping, 
-        image_for_color = np.array(self.croped_image) if croped_image == True else np.array(self.image)
         idx = self.pixel_with_idx[:,2] != -1
         pixels = self.pixel_with_idx[idx,0:3].astype(int)
-        self.color_of_pixel =  np.array(image_for_color)[pixels[:,1],pixels[:,0]]
+        self.color_of_pixel =  np.array(np.array(self.image))[pixels[:,1],pixels[:,0]]
 
     
     def map_no_zbuff(self,croped_camera_matrix = False):
@@ -123,41 +122,6 @@ class Frame(Camera):
         [pixels,idx] = np.unique(pxls[idx_sorted_by_z,:], axis=0,return_index=True)
         return voxels_sorted_by_z[idx,:],pixels
     
-    def add_homo_coords(self,points):
-        """
-        Adds homogeneous coordinates to a set of 3D points.
-
-        Args:
-            points (np.array): Array of 3D points with shape (n, 3).
-
-        Returns:
-            np.array: Array of 3D points in homogeneous coordinates with shape (n, 4).
-        """
-        return np.column_stack((points,np.ones([points.shape[0],1])))
-
-
-    def filter_projections_from_bg(self,point3d,croped_image = False):
-        """
-        Filters 3D points projected onto the image to exclude background pixels.
-
-        Args:
-            point3d (np.array): Array of 3D points to be projected.
-            croped_image (bool): If True, uses the cropped image without background.
-                                If False, uses the full image without background.
-
-        Returns:
-            np.array: Boolean array indicating which projected 3D points are on background pixels (True if background).
-        """
-        image = self.image_no_bg if croped_image == False else self.croped_image_no_bg
-        homo_voxels_with_idx = self.add_homo_coords(point3d)
-        proj = self.project_on_image(homo_voxels_with_idx,croped_camera_matrix = True)
-
-        idx_round = np.round(np.fliplr(proj)).astype(int)
-        idx_to_keep = np.array([True]*idx_round.shape[0])
-        pixels_in_image = ((idx_round > 0) & (idx_round <  self.croped_image_size[1])).all(1)
-        idx_bg = np.array(image)[idx_round[pixels_in_image,0],idx_round[pixels_in_image,1]] == 0
-        idx_to_keep[pixels_in_image] = idx_bg
-        return idx_to_keep
 
 
     

@@ -1,6 +1,23 @@
 
 import numpy as np
 import scipy
+
+
+
+
+def rotate_vector_direction_and_clip(rotation_matrix, vector_points, scale_vector):
+    
+    rotated_vector = np.dot(rotation_matrix,vector_points.T).T
+
+    vector_dir = np.array(rotated_vector[0] - rotated_vector[1] )
+    vector_dir_norm= (vector_dir/np.linalg.norm(vector_dir))
+
+    return rotated_vector + vector_dir_norm*scale_vector
+
+
+
+
+
 def triangulate_least_square(origins,end_of_vectors):
     # triangulate all lines to find the closest 3d point with least square
     # we define a 3d vector ab and a point p

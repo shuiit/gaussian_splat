@@ -82,7 +82,7 @@ def plot_skin_normals(fig,skin_points,normals,skin,skip_skin_points = 10,color =
 def plot_skin(fig,points_to_plot,skin,name,skip_skin_points = 10,color = None, **kwargs):
     color = skin.color if color is None or color.size == 0 else color
     marker_dict_skin = {'size':4,'color': color,  # Set color to distances
-            'colorscale':'Viridis',**kwargs}
+            **kwargs}
     scatter3d(fig,points_to_plot[::skip_skin_points,:],name,marker_dict = marker_dict_skin)
     fig.update_layout(scene=dict(aspectratio=dict(x=1, y=1, z=0.8),aspectmode = 'data',
                              camera_eye=dict(x=1.2, y=1.2, z=0.6)))

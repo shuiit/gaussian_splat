@@ -67,17 +67,16 @@ class Frame(Camera):
         self.camera_calibration_crop(self.top_left) 
 
 
-    def map_3d_2d(self, croped_image = False,use_zbuff = True):
+    def map_3d_2d(self, croped_image = False,use_zbuff = False):
         """
         Map 3D voxel positions to 2D pixel coordinates and store relevant data.
 
         Args:
             croped_image (bool, optional): Whether to use cropped image pixels. Default is False.
         """
-        voxels,pixels_of_voxels = self.z_buffer(croped_camera_matrix = croped_image) if use_zbuff == True else self.map_no_zbuff(croped_camera_matrix = croped_image)
-        pixels_from_image = self.croped_pixels if croped_image else self.pixels
+        voxels,pixels_of_voxels = self.z_buffer() if use_zbuff == True else self.map_no_zbuff()
 
-        original_projected_pixels = np.vstack((pixels_of_voxels,np.fliplr(pixels_from_image))) # project pixels
+        original_projected_pixels = np.vstack((pixels_of_voxels,np.fliplr(self.pixels))) # project pixels
         [non_intersect_pixels,cnt] = np.unique(original_projected_pixels,axis = 0,return_counts=True) # identify non intersecting pixels
         non_intersect_pixels = non_intersect_pixels[cnt == 1,:] 
 
@@ -89,10 +88,10 @@ class Frame(Camera):
         self.voxels_with_idx = np.column_stack((voxels,np.full(pixels_of_voxels.shape[0],self.image_id),np.arange(pixels_of_voxels.shape[0])))
 
         # determine the color of every pixel that has a mapping, 
-        image_for_color = np.array(self.croped_image) if croped_image == True else np.array(self.image)
         idx = self.pixel_with_idx[:,2] != -1
         pixels = self.pixel_with_idx[idx,0:3].astype(int)
-        self.color_of_pixel =  np.array(image_for_color)[pixels[:,1],pixels[:,0]]
+        self.color_of_pixel =  np.array(np.array(self.image))[pixels[:,1],pixels[:,0]]
+        return self.color_of_pixel
 
     def idx_to_real(self):
         """
@@ -112,7 +111,7 @@ class Frame(Camera):
         voxels_sorted_by_z = self.points_in_ew_frame[idx_sorted_by_z,:]
         return voxels_sorted_by_z,pxls[idx_sorted_by_z,:]
 
-    def z_buffer(self,croped_camera_matrix = False):
+    def z_buffer(self):
         """
         Compute the z-buffer for 3D points, projecting them onto the 2D image plane.
 
@@ -123,7 +122,7 @@ class Frame(Camera):
             tuple: A tuple containing sorted voxel positions and pixel coordinates.
         """
         voxels_cam = np.matmul(self.world_to_cam, self.points_in_ew_frame_homo.T).T
-        projected = self.project_on_image(self.points_in_ew_frame_homo,croped_camera_matrix)
+        projected = self.project_on_image(self.points_in_ew_frame_homo)
         pxls = np.round(projected) 
         idx_sorted_by_z = voxels_cam[:,2].argsort()
         voxels_sorted_by_z = self.points_in_ew_frame[idx_sorted_by_z,:]

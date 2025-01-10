@@ -30,16 +30,17 @@ class Camera():
 
         
 
-    def camera_calibration_crop(self,crop_pixels):
+    def camera_calibration_crop(self,crop_pixels, image_size):
         """updates the intrinsic K matrix for croped images
 
         Args:
             crop_pixels (np array): loaction of top left pixel 
         """
+        self.image_size = image_size
         self.K = self.K.copy()
         self.K[0,2] = self.K[0,2] - crop_pixels[1]
         self.K[1,2] = self.K[1,2] - (crop_pixels[0])
-        
+
         self.fx = self.K[0,0]
         self.fy = self.K[1,1]
         self.cx = self.K[0,2]
@@ -66,8 +67,6 @@ class Camera():
         kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
         rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
         return rotation_matrix
-
-
 
     
     def project_on_image(self,points):
@@ -182,7 +181,7 @@ class Camera():
         xyz_homo  = self.homogenize_coordinate(points)
 
 
-        p_proj = np.matmul(self.full_proj_transform,xyz_homo).T
+        p_proj = np.matmul(self.full_proj_transform,xyz_homo.T).T
         p_proj = p_proj/p_proj[:,3:]
         pixels = self.proj_screen(p_proj,self.image_size[0])
         return pixels
