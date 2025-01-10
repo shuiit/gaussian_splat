@@ -30,11 +30,11 @@ class Skin():
         self.ptcloud_skin = self.ptcloud_skin - translation
 
 
-    def calculate_weights_dist(self):        
-        # weights = np.vstack([joint.bone.calculate_dist_from_bone(self.ptcloud_skin) for joint in self.bones]).T
+    def calculate_weights_dist(self, bones = None):        
+
         # self.weights = (1/weights)/np.sum((1/weights),1)[:,np.newaxis]
-         
-        weights = np.array([joint.bone.calculate_dist_from_bone(self.ptcloud_skin) for joint in self.bones[0:3]]).T
+        bones = bones if bones else self.bones
+        weights = np.array([joint.bone.calculate_dist_from_bone(self.ptcloud_skin) for joint in bones]).T
         idx = np.argmin(weights, axis=1)
         weights = np.zeros((weights.shape[0],len(self.bones)))
         weights[np.arange(weights.shape[0]), idx] = 1
