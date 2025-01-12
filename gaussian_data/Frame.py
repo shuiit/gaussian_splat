@@ -19,6 +19,8 @@ class Frame(Camera):
             real_coord (numpy.ndarray): Array of real coordinates associated with the points.
             idx (int): Unique identifier for the image.
         """
+
+        
         im = scipy.io.loadmat(f'{path}images/{im_name}.mat')['im']
         bg = scipy.io.loadmat(f'{path}images/bg.mat')['bg']
         self.bg = np.array((bg//255).astype(np.uint16))*0+255
@@ -176,10 +178,6 @@ class Frame(Camera):
         idx_bg = np.array(image)[idx_round[pixels_in_image,0],idx_round[pixels_in_image,1]] == 0
         idx_to_keep[pixels_in_image] = idx_bg
         return idx_to_keep
-
-
-    
-
 
 
 

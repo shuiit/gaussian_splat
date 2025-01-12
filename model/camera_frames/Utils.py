@@ -1,7 +1,7 @@
 
 import numpy as np
 import scipy
-
+import pickle
 
 
 
@@ -15,6 +15,39 @@ def rotate_vector_direction_and_clip(rotation_matrix, vector_points, scale_vecto
     return rotated_vector + vector_dir_norm*scale_vector
 
 
+
+def get_dict_for_points3d(frames):
+    """
+    Create dictionaries mapping 3D voxel positions and their mean colors.
+
+    This function processes voxel data from multiple frames to generate a dictionary
+    that associates unique voxel identifiers with their 3D positions and another dictionary 
+    that maps voxel identifiers to their corresponding mean color values.
+
+    Args:
+        frames (dict): A dictionary containing frame data, where each key is an image identifier 
+                       and each value has attributes for voxel indices and pixel colors.
+
+    Returns:
+        tuple: A tuple containing:
+            - dict: A dictionary mapping voxel identifiers to their 3D positions (list of floats).
+            - dict: A dictionary mapping voxel identifiers to their mean color values (list of floats).
+    """
+
+    # generates the dictionary of all 3d-2d mappings from every frame. 
+    colors = np.hstack([frames[im_name].color_of_pixel for im_name in frames.keys()])
+    all_voxels = np.column_stack((np.vstack(([(frames[im_name].voxels_with_idx) for im_name in frames.keys()])),colors))
+    unique_voxels  = np.unique(all_voxels[:,0:4],axis = 0)
+
+    voxel_dict = {vxl[3]:list(vxl[0:3]) for vxl in unique_voxels}
+    [voxel_dict[vxl[3]].extend(vxl[4:-1]) for vxl in all_voxels]
+
+    # calculate mean color
+    colors_dict = {vxl[3]:[] for vxl in unique_voxels}
+    for vxl in all_voxels:
+        colors_dict[vxl[3]].extend(vxl[6:])
+    colors_dict = {key: [np.mean(np.array(values)).astype(int)]*3 for key, values in colors_dict.items()}
+    return voxel_dict,colors_dict
 
 
 
@@ -55,3 +88,11 @@ def load_hull(body_wing,path):
         numpy.ndarray: An array containing the 3D hull points for the specified body part.
     """
     return scipy.io.loadmat(f'{path}/3d_pts/{body_wing}.mat')['hull']
+
+
+
+
+def pickle_file(dict, file_name):
+    with open(file_name, 'wb') as f:
+        pickle.dump(dict, f)
+

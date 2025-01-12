@@ -24,6 +24,9 @@ class Skin():
         mesh = o3d.io.read_triangle_mesh(path_to_mesh)
         pt_cloud = np.asarray(mesh.vertices)
         normals = np.asarray(mesh.vertex_normals)
+        [pt_cloud,idx] = np.unique(pt_cloud,axis = 0,return_index= True)
+        normals = normals[idx,:]
+
         return np.hstack((pt_cloud,normals))
     
     def translate_ptcloud_skin(self,translation):

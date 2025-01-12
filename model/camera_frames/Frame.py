@@ -4,7 +4,6 @@ from PIL import Image
 from Camera import Camera
 import numpy as np
 import scipy.io
-import pandas as pd
 import matplotlib.pyplot as plt
 from skimage.exposure import match_histograms
 class Frame(Camera):
@@ -121,6 +120,30 @@ class Frame(Camera):
         voxels_sorted_by_z = self.points_in_ew_frame[idx_sorted_by_z,:]
         [pixels,idx] = np.unique(pxls[idx_sorted_by_z,:], axis=0,return_index=True)
         return voxels_sorted_by_z[idx,:],pixels
+    
+
+    
+
+    def save_croped_images(self):
+        image_rgb = self.image.convert('RGB')
+        im_np = np.array(image_rgb)
+        idx = np.where(im_np[:,:,0] == 0)
+        im_np[idx[0],idx[1],0] = 200
+        image = Image.fromarray(im_np)
+        image.save(f'{self.path}/input_data_for_gs/images/{self.image_name}', format='JPEG', subsampling=0, quality=100)
+
+
+    
+    def generate_base_image(self):
+
+        return {'id' :self.image_id, 'qvec' : self.qvec.copy(), 'tvec' : self.t.T[0].copy(),
+                            'camera_id': self.camera_number, 'name' : self.image_name
+                            }
+
+
+    
+
+
     
 
 

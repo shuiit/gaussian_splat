@@ -203,6 +203,13 @@ class Camera():
 
 
 
+    def cams_for_gs(self):
+
+        params = self.K[0,0], self.K[1,1], self.K[0,2], self.K[1,2]
+        return {'id' : self.camera_number, 'model' : 'PINHOLE',
+                                            'width' : self.image.size[0], 'height' : self.image.size[1],
+                                            'params' : params}
+    
         
     
 
