@@ -39,7 +39,7 @@ def scatter3d(fig,data,legend, mode = 'markers',line_dict = {},marker_dict = {})
     return fig
 
 def plot_cones(fig, points, normals,skip = 10,sizeref = 1000,opacity = 0.5):
-    skip = 10
+
     fig.add_trace(go.Cone(
     x=points[::skip,0],
     y=points[::skip,1],

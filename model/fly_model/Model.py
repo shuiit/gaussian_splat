@@ -29,6 +29,7 @@ class Model():
         self.path_to_frame = path_to_frame
         self.skeleton_scale = skeleton_scale
         self.skin_translation = np.array([-0.1-1,0,1])*skeleton_scale
+        
 
         self.initilize_skeleton()
         self.initilize_ptcloud()
@@ -39,7 +40,11 @@ class Model():
         translation = [self.cm_point_lab,self.thorax.translation_from_parent]
         [self.update_local_rotation(joint_to_update,rotation) for joint_to_update,rotation in zip(joint_to_update,rotation)]
         [self.update_local_translation(joint_to_update,translation) for joint_to_update,translation in zip(joint_to_update,translation)]
-        self.global_rotated = self.update_skin_and_joints()
+        self.global_rotated,self.global_normal = self.update_skin_and_joints()
+
+        self.global_rotated_ew = self.rotate_to_ew(self.global_rotated)
+        self.global_normal_ew = self.rotate_to_ew(self.global_normal)
+
 
 
 
@@ -81,6 +86,13 @@ class Model():
         self.left_wing_skin.calculate_weights_constant()
 
         self.fly_skin.ptcloud_skin = np.vstack([self.body_skin.ptcloud_skin,self.right_wing_skin.ptcloud_skin,self.left_wing_skin.ptcloud_skin])
+
+
+
+        
+        self.color = np.full(self.fly_skin.ptcloud_skin.shape,100)
+        self.fly_skin.skin_normals = np.vstack([self.body_skin.skin_normals,self.right_wing_skin.skin_normals,self.left_wing_skin.skin_normals])
+
         self.fly_skin.weights = np.vstack([self.body_skin.weights,self.right_wing_skin.weights,self.left_wing_skin.weights])
     
         
@@ -124,8 +136,13 @@ class Model():
 
     def update_skin_and_joints(self):
         [joint.update_rotation() for joint in self.joint_list]
-        return  self.fly_skin.rotate_skin_points() 
+        return  self.fly_skin.rotate_skin_points(),self.fly_skin.rotate_skin_normals() 
         # all_skin_normals_parts = [skin.rotate_skin_normals() for skin in self.all_skin]
+
+
+    def rotate_to_ew(self,points):
+        return np.dot(self.rot_mat_ew_to_lab.T,points.T).T
+
 
 
 
