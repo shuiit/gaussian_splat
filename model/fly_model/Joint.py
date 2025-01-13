@@ -6,6 +6,8 @@ class Joint:
     def __init__(self, translation, rotation,  parent = None, end_joint_of_bone = True, rotation_order = 'zyx', scale = 1,color = 'green'):
         self.child = []
         self.parent = parent
+        self.local_angles = rotation
+        self.local_translation = translation
         self.rotation_order = list(rotation_order)
         self.local_rotation = self.rotation_matrix(rotation[0],rotation[1],rotation[2])
         self.translation_from_parent = np.array(translation)*scale

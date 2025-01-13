@@ -69,7 +69,7 @@ load([path,easyWand_name])
 for j= 1:1:4
 
 [R,K,X0,H] = decompose_dlt(easyWandData.coefs(:,j),easyWandData.rotationMatrices(:,:,j)');
-rotation(:,:,j) = R; 
+rotation(:,:,j) = R./vecnorm(R')'; 
 translation(:,:,j) = X0; 
 k_all(:,:,j) = K;
 pmdlt{j} = [K*R,-K*R*X0];

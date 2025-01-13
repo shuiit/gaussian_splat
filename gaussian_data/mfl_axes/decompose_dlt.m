@@ -11,7 +11,7 @@ flip_cam = [1,0,0;0,1,0;0,0,1];
 
 X0 = -inv(H)*h;
 
-[R,K] = QR_Decomposition(inv(H));
+[R,K] = qr(inv(H));
 R = flip_cam*R;
 % K = flip_cam*K;
 
