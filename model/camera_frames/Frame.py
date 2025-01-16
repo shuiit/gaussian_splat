@@ -29,9 +29,10 @@ class Frame(Camera):
     def load_image(self):
    
         im = scipy.io.loadmat(f'{self.path}images/{self.image_name.split(".jpg")[0]}.mat')['im']
-        bg = np.array((scipy.io.loadmat(f'{self.path}images/bg.mat')['bg']//255).astype(np.uint16))*0+255
+        bg = np.array((scipy.io.loadmat(f'{self.path}images/bg.mat')['bg']//255).astype(np.uint16))
+        white_bg = bg*0 + 255
         image = Image.fromarray(np.array((im * 255).astype(np.uint8)), mode="L")
-        return image,bg
+        return image,white_bg,bg
     
     def erode_and_add_bf(self,image,bg,kernel = np.ones((2, 2), np.uint8)):
         
@@ -40,6 +41,22 @@ class Frame(Camera):
         image_with_bg[eroded_image > 0] = eroded_image[eroded_image > 0]
         return Image.fromarray(image_with_bg),Image.fromarray(eroded_image)
 
+
+    def calculate_bounding_box(self,cm,delta_xy):
+        top_left = np.array([max(0,cm[1] - delta_xy), max(0,cm[0]-delta_xy)])
+        bottom_right =  np.array([min(self.image_size[0],cm[1] + delta_xy), min(self.image_size[1],cm[0] + delta_xy)])
+
+        if (bottom_right != 0).any():
+            top_left = np.minimum(bottom_right - delta_xy*2,top_left) 
+        return np.hstack((top_left,bottom_right))
+        
+        # bottom_right = np.array([min(self.image_size[0],bottom_right[0]),min(self.image_size[1],bottom_right[1])])
+
+
+        # self.bounding_box = [max(0,cm[1] - delta_xy), max(0,cm[0]-delta_xy), max(0,cm[1] - delta_xy) + delta_xy*2 , max(0,cm[0]-delta_xy) + delta_xy*2] # [top left, bottom right]
+
+
+
     def load_and_crop_image(self,delta_xy = 80):
         """
         Crop the image around the mean pixel coordinates.
@@ -47,21 +64,23 @@ class Frame(Camera):
         Args:
             delta_xy (int, optional): The half-width of the cropping area. Default is 80.
         """
-        image,bg = self.load_image()
-        image,image_no_bg = self.erode_and_add_bf(image,bg)
+        image,white_bg,bg = self.load_image()
+        image,image_no_bg = self.erode_and_add_bf(image,white_bg)
 
         pixels = np.vstack(np.where(np.array(image_no_bg) > 0)).T
         cm = np.mean(pixels,0).astype(int)
-        self.bounding_box = [max(0,cm[1] - delta_xy), max(0,cm[0]-delta_xy), max(0,cm[1] - delta_xy) + delta_xy*2 , max(0,cm[0]-delta_xy) + delta_xy*2] # [top left, bottom right]
+        self.bounding_box = self.calculate_bounding_box(cm,delta_xy)
         self.top_left = [cm[0]-delta_xy,cm[1]-delta_xy]
         self.crop_size = delta_xy*2
         self.image = image.crop(self.bounding_box)
 
         self.camera_calibration_crop(self.top_left, self.image.size) 
 
-        self.bg  = bg[self.bounding_box[0]:self.bounding_box[2],self.bounding_box[1]:self.bounding_box[2]]
+        self.bg  = bg[self.bounding_box[0]:self.bounding_box[2],self.bounding_box[1]:self.bounding_box[3]]
         self.image_no_bg = image_no_bg.crop(self.bounding_box)
         self.image_size = self.image.size
+        image_mask = np.array(self.image) > 0 
+        self.image_with_bg = self.bg*image_mask + self.image_no_bg
         self.pixels = pixels - self.top_left
         self.cm = np.mean(self.pixels,0)
 
