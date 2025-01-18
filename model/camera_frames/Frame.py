@@ -43,8 +43,8 @@ class Frame(Camera):
 
 
     def calculate_bounding_box(self,cm,delta_xy):
-        top_left = np.array([max(0,cm[1] - delta_xy), max(0,cm[0]-delta_xy)])
-        bottom_right =  np.array([min(self.image_size[0],cm[1] + delta_xy), min(self.image_size[1],cm[0] + delta_xy)])
+        top_left = np.array([max(0,cm[0] - delta_xy), max(0,cm[1]-delta_xy)])
+        bottom_right =  np.array([min(self.image_size[0],cm[0] + delta_xy), min(self.image_size[1],cm[1] + delta_xy)])
 
         if (bottom_right != 0).any():
             top_left = np.minimum(bottom_right - delta_xy*2,top_left) 
@@ -70,17 +70,17 @@ class Frame(Camera):
         pixels = np.vstack(np.where(np.array(image_no_bg) > 0)).T
         cm = np.mean(pixels,0).astype(int)
         self.bounding_box = self.calculate_bounding_box(cm,delta_xy)
-        self.top_left = [cm[0]-delta_xy,cm[1]-delta_xy]
+        self.top_left = self.bounding_box[0:2] # to-left
         self.crop_size = delta_xy*2
-        self.image = image.crop(self.bounding_box)
+        self.image = image.crop([self.bounding_box[1],self.bounding_box[0],self.bounding_box[3],self.bounding_box[2]])
 
         self.camera_calibration_crop(self.top_left, self.image.size) 
 
         self.bg  = bg[self.bounding_box[0]:self.bounding_box[2],self.bounding_box[1]:self.bounding_box[3]]
-        self.image_no_bg = image_no_bg.crop(self.bounding_box)
+        self.image_no_bg = image_no_bg.crop([self.bounding_box[1],self.bounding_box[0],self.bounding_box[3],self.bounding_box[2]])
         self.image_size = self.image.size
-        image_mask = np.array(self.image) > 0 
-        self.image_with_bg = self.bg*image_mask + self.image_no_bg
+        image_mask = (np.array(self.image)  == 255 )
+        self.image_with_bg = self.bg*image_mask + np.array(self.image_no_bg)
         self.pixels = pixels - self.top_left
         self.cm = np.mean(self.pixels,0)
 
